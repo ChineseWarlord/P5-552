@@ -11,7 +11,7 @@ def timer(method):
     return wrapper  
 
 class Human:
-    def __init__(self, name, lastname, age, address, cpr_no = 123456-7891):
+    def __init__(self, name, lastname, age, address, cpr_no = "123456-7891"):
         self.name = name
         self.lastname = lastname
         self.age = age
@@ -34,12 +34,11 @@ class Student(Human):
         self.courses = []
         
     def __repr__(self):
-        return "Name: {} {}\nAge: {} years\nAddress: {}\nCPR no.: {} Semester: {} Email: {}".format(
+        return "Name: {} {}\nAge: {} years\nAddress: {}\nSemester: {} \nEmail: {}".format(
         self.name,
         self.lastname,
         self.age,
         self._address,
-        self.__cpr,
         self.semester,
         self.email)
         
