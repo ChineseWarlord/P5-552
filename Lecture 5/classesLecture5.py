@@ -17,6 +17,7 @@ class Human:
         self.age = age
         self._address = address 
         self.__cpr = cpr_no
+        
     def __repr__(self):
         return "Name: {} {}\nAge: {} years\nAddress: {}\nCPR no.: {}".format(
         self.name,
@@ -31,6 +32,17 @@ class Student(Human):
         self.semester = []
         self.email = "{}{}@student.aau.dk".format(name[0],lastname[0:2])
         self.courses = []
+        
+    def __repr__(self):
+        return "Name: {} {}\nAge: {} years\nAddress: {}\nCPR no.: {} Semester: {} Email: {}".format(
+        self.name,
+        self.lastname,
+        self.age,
+        self._address,
+        self.__cpr,
+        self.semester,
+        self.email)
+        
     def enrol_in_semester(self,semester):
         self.semester = semester
     def get_semester(self):
@@ -39,6 +51,7 @@ class Student(Human):
         return self.email
     def enrol_in_group(self,group):
         group.enrol_student(self)
+    
 
 class StudentGroup():
     def __init__(self, education, semester, number = 156):
