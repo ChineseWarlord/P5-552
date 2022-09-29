@@ -3,7 +3,7 @@ from time import sleep
 import select
 
 
-HOST = '127.0.0.1'
+HOST = '192.168.31.17'
 PORT = 5000                 # An integer from 1 to 65535
 
 
@@ -34,5 +34,5 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:    # AF_INET is the
                 s.close()
                 break
             else:
-                conn.sendall(data)
+                conn.sendall(input("Enter text: \n".encode()))
 # No s.close is needed
