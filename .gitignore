@@ -63,5 +63,7 @@ dkms.conf
 *.inc
 Sionna_Test/venv/*
 venv/
-
+examples/*
+*.examples/
+*.examples
 
