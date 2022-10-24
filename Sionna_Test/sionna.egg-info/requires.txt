@@ -1,0 +1,10 @@
+numpy
+matplotlib
+scipy
+importlib_resources
+
+[:sys_platform != "darwin"]
+tensorflow!=2.7.0,!=2.7.1,!=2.8.0,<2.11,>=2.6.4
+
+[:sys_platform == "darwin"]
+tensorflow-macos<2.10,>=2.6
