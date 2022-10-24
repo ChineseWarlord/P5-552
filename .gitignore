@@ -61,3 +61,7 @@ dkms.conf
 # Python stuff
 *.venv
 *.inc
+Sionna_Test/venv/*
+venv/
+
+
