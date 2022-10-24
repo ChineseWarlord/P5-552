@@ -1,4 +1,0 @@
-recursive-include ./sionna *.csv *.npy *.json
-#include ./sionna *.csv, *.npy
-prune test
-
