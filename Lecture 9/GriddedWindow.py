@@ -12,4 +12,4 @@ class GriddedWindow(tk.Tk):
         self.mainloop()
 
 if __name__=="__main__":
-    window = GriddedWindow(4,5)
+    window = GriddedWindow(10,10)
