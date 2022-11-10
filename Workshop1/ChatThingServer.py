@@ -152,7 +152,7 @@ class Page_UserRegistration(tk.Frame):
             self.register_title_label.config(text="No Username or Password was entered!", fg="red", font=('arial',10,'bold'))
         if self.ListOfUsernames.get() and self.ListOfPasswords.get():
             print(f"Username: {self.ListOfUsernames.get()} \n" + f"Password: {self.ListOfPasswords.get()}")
-            self.register_title_label.config(text="User Registration Successful!", fg="red", font=('arial',10,'bold'))
+            self.register_title_label.config(text="User Registration Successful!", fg="#211A52", font=('arial',10,'bold'))
             
         # Check with server is user is already registered  
         
