@@ -1,58 +1,38 @@
-import tkinter as tk
+from tkinter import*
+root = Tk()
+root.geometry('500x500')
+root.title("Registration Form")
 
-class Page(tk.Frame):
-    def __init__(self, *args, **kwargs):
-        tk.Frame.__init__(self, *args, **kwargs)
-    def show(self):
-        self.lift()
+label_0 = Label(root, text="Registration form",width=20,font=("bold", 20))
+label_0.place(x=90,y=53)
 
-class Page1(Page):
-   def __init__(self, *args, **kwargs):
-       Page.__init__(self, *args, **kwargs)
-       label = tk.Label(self, text="This is page 1")
-       label.pack(side="top", fill="both", expand=True)
 
-class Page2(Page):
-   def __init__(self, *args, **kwargs):
-       Page.__init__(self, *args, **kwargs)
-       label = tk.Label(self, text="This is page 2")
-       label.pack(side="top", fill="both", expand=True)
+label_1 = Label(root, text="FullName",width=20,font=("bold", 10))
+label_1.place(x=80,y=130)
 
-class Page3(Page):
-   def __init__(self, *args, **kwargs):
-       Page.__init__(self, *args, **kwargs)
-       label = tk.Label(self, text="This is page 3")
-       label.pack(side="top", fill="both", expand=True)
+entry_1 = Entry(root)
+entry_1.place(x=240,y=130)
 
-class MainView(tk.Frame):
-    def __init__(self, *args, **kwargs):
-        tk.Frame.__init__(self, *args, **kwargs)
-        p1 = Page1(self)
-        p2 = Page2(self)
-        p3 = Page3(self)
+label_2 = Label(root, text="Email",width=20,font=("bold", 10))
+label_2.place(x=68,y=180)
 
-        buttonframe = tk.Frame(self)
-        container = tk.Frame(self)
-        buttonframe.pack(side="top", fill="x", expand=False)
-        container.pack(side="top", fill="both", expand=True)
+entry_2 = Entry(root)
+entry_2.place(x=240,y=180)
 
-        p1.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
-        p2.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
-        p3.place(in_=container, x=0, y=0, relwidth=1, relheight=1)
+label_3 = Label(root, text="Gender",width=20,font=("bold", 10))
+label_3.place(x=70,y=230)
+var = IntVar()
+Radiobutton(root, text="Male",padx = 5, variable=var, value=1).place(x=235,y=230)
+Radiobutton(root, text="Female",padx = 20, variable=var, value=2).place(x=290,y=230)
 
-        b1 = tk.Button(buttonframe, text="Page 1", command=p1.show)
-        b2 = tk.Button(buttonframe, text="Page 2", command=p2.show)
-        b3 = tk.Button(buttonframe, text="Page 3", command=p3.show)
+label_4 = Label(root, text="Age:",width=20,font=("bold", 10))
+label_4.place(x=70,y=280)
 
-        b1.pack(side="left")
-        b2.pack(side="left")
-        b3.pack(side="left")
 
-        p1.show()
+entry_2 = Entry(root)
+entry_2.place(x=240,y=280)
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    main = MainView(root)
-    main.pack(side="top", fill="both", expand=True)
-    root.wm_geometry("400x400")
-    root.mainloop()
+Button(root, text='Submit',width=20,bg='brown',fg='white').place(x=180,y=380)
+# it is use for display the registration form on the window
+root.mainloop()
+print("registration form  seccussfully created...")

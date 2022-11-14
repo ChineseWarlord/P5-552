@@ -12,6 +12,7 @@ class SendData(threading.Thread):
         threading.Thread.__init__(self)
         self.ds=tcp_socket
         self.uu=user
+        
     def run(self):
         print("Write text and press enter to send [EEXIT to leave chat]: ")
         while True:
@@ -43,6 +44,7 @@ s = socket(AF_INET,SOCK_STREAM)
 s.connect((SERVER_IP, SERVER_PORT))
 connect_list=["CONNECT",USERNAME]
 data_string = pickle.dumps(connect_list)
+
 s.send(data_string)
 data = s.recv(BUFFER_SIZE)
 data_list = pickle.loads(data)

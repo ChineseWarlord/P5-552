@@ -1,14 +1,70 @@
 import socket, threading, pickle
+import csv
 
 HOST = ''           # Symbolic name meaning all available interfaces
 BASE_PORT = 1234    # Arbitrary non-privileged port
+VERIFY_PORT = 1111  
 CONN_COUNTER = 0    # Counter for connections
 BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
-MAX_USERS = 2
+MAX_USERS = 99
 USERNAMES_LIST = []
 ID_LIST = []
 PORT_IDS = []
 PORT_HANDLES = []
+
+class VerifyThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        PORT1 = 65432  # Port to listen on (non-privileged ports are > 1023)
+        
+        while True:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            print("Working?")
+            s.bind((HOST, PORT1))
+            s.listen()
+            self.conn, addr = s.accept()
+            
+            with self.conn:
+                print(f"Connected by {addr}")
+                data = self.conn.recv(BUFFER_SIZE)
+                data2 = pickle.loads(data)
+                print("Data: {}".format(data2))   
+            #print("Socket status: {}".format(s))
+            
+            rows = [data2]
+            
+            with open('Users.csv', 'rt') as f:
+                csv_reader = csv.reader(f, delimiter=',')
+        
+                for line in csv_reader:
+                    print("line: {}".format(line))
+                    
+                    for line2 in line:
+                        print("line2: {}".format(line2))
+            f.close()
+            
+            if data2 == line:
+                print("Same user")
+                text = "Same user!"
+                self.data_string = pickle.dumps(text)
+                self.conn.send(self.data_string)
+            else:
+                with open('Users.csv', 'a', newline='') as f:
+                    csv_writer = csv.writer(f)
+                    csv_writer.writerows(rows)
+                    
+                    with open('Users.csv', 'rt') as f:
+                            csv_reader = csv.reader(f, delimiter=',')
+                            for line in csv_reader:
+                                print("linewr: {}".format(line))
+                                for line2 in line:
+                                    print("line2wr: {}".format(line2))
+            
+            s.close()
+                
+                
+
 
 class ClientThread(threading.Thread):
     def __init__(self,clientAddress,clientsocket,cc,uu,ii,pi,hi):
@@ -85,9 +141,15 @@ server.bind((HOST, BASE_PORT))
 print("Chat Server started.")
 print("Waiting for chat client connections...")
 while True:
+    threadd = VerifyThread()
+    threadd.start()
     server.listen(1)
     clientsock, clientAddress = server.accept()
     CONN_COUNTER=CONN_COUNTER+1
     newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
     newthread.start()
+    
+    send_data = input()
+    if send_data == "EEXIT" or send_data == "eexit":
+        break
     
