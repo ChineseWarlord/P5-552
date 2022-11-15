@@ -60,3 +60,6 @@ dkms.conf
 
 # Python stuff
 *.venv
+
+# Folder stuff
+Workshop1/tempCodeRunnerFile.py
