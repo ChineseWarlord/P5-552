@@ -16,7 +16,12 @@ class VerifyThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         PORT1 = 65432  # Port to listen on (non-privileged ports are > 1023)
+        self.Data_User = []
+        self.Data_Pass = []
+        self.Usernames = []
+        self.Passwords = []
         
+            
         while True:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -28,42 +33,62 @@ class VerifyThread(threading.Thread):
             with self.conn:
                 print(f"Connected by {addr}")
                 data = self.conn.recv(BUFFER_SIZE)
-                data2 = pickle.loads(data)
-                print("Data: {}".format(data2))   
-            #print("Socket status: {}".format(s))
+                self.data2 = pickle.loads(data)
+                print("Data: {}".format(self.data2))
+                self.Data_User = self.data2[0]
+                self.Data_Pass = self.data2[1]
+                self.Data_UserPass = self.data2[0]+self.data2[1]
+                print("Data_User: {}".format(self.Data_User))  
+                print("Data_Pass: {}".format(self.Data_Pass)) 
+                print("Data_UserPass: {}".format(self.Data_UserPass)) 
+                #text = "OK - Cancer"
+                #self.data_string = pickle.dumps(text)
+                #self.conn.send(self.data_string)
+                self.Check_User()
+                self.conn.close()
+                #print("Socket status: {}".format(s))
             
-            rows = [data2]
+    def Check_User(self):
+            rows = [self.data2]
+            test1 = []
+            Data = self.Data_UserPass
             
-            with open('Users.csv', 'rt') as f:
+            #testt = "hejfisk"
+            #test2.append(testt)
+            #print("test2 {}".format(test2))
+            #if Data in test2:
+            #    print("User: {}".format(Data))
+            #    test2.clear()
+            #    print("After test2 {}".format(test2))
+                
+            
+            with open('Users.csv', 'r') as f:
                 csv_reader = csv.reader(f, delimiter=',')
-        
+                #next(csv_reader)
                 for line in csv_reader:
-                    print("line: {}".format(line))
+                    cunt = line[0]+line[1]
+                    test1.append(cunt)
+                    print("cunt: {}".format(cunt))
+                    print("test1: {}".format(test1))
                     
-                    for line2 in line:
-                        print("line2: {}".format(line2))
-            f.close()
-            
-            if data2 == line:
-                print("Same user")
-                text = "Same user!"
-                self.data_string = pickle.dumps(text)
-                self.conn.send(self.data_string)
-            else:
-                with open('Users.csv', 'a', newline='') as f:
-                    csv_writer = csv.writer(f)
-                    csv_writer.writerows(rows)
+                if Data in test1:
+                        print("NOT OK!")
+                        print("test1 not in data: {}".format(test1))
                     
-                    with open('Users.csv', 'rt') as f:
-                            csv_reader = csv.reader(f, delimiter=',')
-                            for line in csv_reader:
-                                print("linewr: {}".format(line))
-                                for line2 in line:
-                                    print("line2wr: {}".format(line2))
-            
-            s.close()
+                        text = "NOT OK!"
+                        self.data_string = pickle.dumps(text)
+                        self.conn.send(self.data_string)
+                if Data not in test1:
+                    test1.clear()
+                    print("test1 in data: {}".format(test1))
+                    with open('Users.csv', 'a', newline='') as f:
+                        csv_writer = csv.writer(f)
+                        csv_writer.writerows(rows)
+                        print("OK!")
                 
-                
+                        text = "YES OK!"
+                        self.data_string = pickle.dumps(text)
+                        self.conn.send(self.data_string) 
 
 
 class ClientThread(threading.Thread):

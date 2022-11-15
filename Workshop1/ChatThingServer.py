@@ -20,7 +20,8 @@ import pickle
 
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 1234
-VERIFY_PORT = 65432
+VERIFY_PORT_REGISTER = 65432
+VERIFY_PORT_LOGIN = 65433
 BUFFER_SIZE = 1024
 
 
@@ -53,6 +54,9 @@ class Page_Login(tk.Frame):
     def __init__(self, parent, controller):
         
         tk.Frame.__init__(self, parent)
+        self.controller = controller
+        self.Username = tk.StringVar()
+        self.Password = tk.StringVar()
         
         self.frame1 = tk.Frame(master=self, borderwidth=1, background="blue")
         self.frame1.pack()
@@ -63,16 +67,17 @@ class Page_Login(tk.Frame):
         self.frame2.pack()
         self.username_label = tk.Label(self.frame2,text="Username")
         self.username_label.pack(side=tk.TOP)
-        self.username_entry = tk.Entry(self.frame2, width=50, borderwidth=10)
+        self.username_entry = tk.Entry(self.frame2, width=50, borderwidth=10,textvariable=self.Username)
         self.username_entry.pack(side=tk.LEFT)
         self.username_entry.bind("<Return>",self.key_pressed)
+        self.username_entry.get()
 
 
         self.frame3 = tk.Frame(master=self, borderwidth=1, background="black")
         self.frame3.pack()
         self.pwd_label = tk.Label(self.frame3,text="Password")
         self.pwd_label.pack(side=tk.TOP)
-        self.pwd_entry = tk.Entry(self.frame3, width=50,borderwidth=10)
+        self.pwd_entry = tk.Entry(self.frame3, width=50,borderwidth=10,textvariable=self.Password)
         self.pwd_entry.pack(side=tk.LEFT)
         self.pwd_entry.bind("<Return>",self.key_pressed)
 
@@ -92,10 +97,25 @@ class Page_Login(tk.Frame):
         self.username_entry.delete(0, 'end')
         entered_pwd = self.pwd_entry.get()
         self.pwd_entry.delete(0, 'end')
-        if entered_username == "sim" and entered_pwd=="123":
+        
+        self.se = socket(AF_INET,SOCK_STREAM)
+        self.se.connect((SERVER_IP, VERIFY_PORT_LOGIN))
+        data_User = self.Username.get()
+        data_Pass = self.Password.get()
+        self.data_string = pickle.dumps([data_User, data_Pass])
+        self.se.send(self.data_string)
+        data = self.se.recv(BUFFER_SIZE)
+        data = pickle.loads(data)
+        print("From Server: {}".format(data))
+            
+        if data == "YES OK!":
+            print("OK from server :)")
+            print(f"Username: {self.Username.get()} \n" + f"Password: {self.Password.get()}")
             self.title_label.config(text="Login successful!", fg="#211A52", font=('arial',10,'bold'))
-        else:
-            self.title_label.config(text="Incorrect username and/or password!", fg="red", font=('arial',10,'bold'))
+        if data == "NOT OK!":
+            print("NOT OK from server :)")
+            self.title_label.config(text="Incorrect username and/or password!", fg="red", font=('arial',10,'bold'))        
+    
             
     def register(self):
         register = Page_UserRegistration()
@@ -120,6 +140,7 @@ class Page_UserRegistration(tk.Frame):
         self.username_label.pack(side=tk.LEFT)
         self.username_entry = tk.Entry(self.frame2, width=50,textvariable=self.Username)
         self.username_entry.pack()
+        self.username_entry.bind("<Return>",self.key_pressed)
 
         self.frame3 = tk.Frame(master=self, borderwidth=10, bg="green")
         self.frame3.pack()
@@ -127,15 +148,21 @@ class Page_UserRegistration(tk.Frame):
         self.pwd_label.pack(side=tk.LEFT)
         self.pwd_entry = tk.Entry(self.frame3, width=50,textvariable=self.Password,show="*")
         self.pwd_entry.pack()
+        self.pwd_entry.bind("<Return>",self.key_pressed)
         
         self.frame4 = tk.Frame(master=self, borderwidth=10,bg="yellow")
         self.frame4.pack()
         self.register_button = tk.Button(self.frame4, text="Register now",command=lambda:[self.register_user(), self.clear_entry()], bg="#211A52", fg = "white")
         self.register_button.pack(side=tk.LEFT)
         
+        
         self.return_button = tk.Button(self.frame4, text="Return",command=lambda : [controller.show_frame(Page_Login),self.clear_entry()], bg="#211A52", fg = "white")
         self.return_button.pack(side=tk.LEFT)
-        
+    
+    def key_pressed(self, event):
+        self.register_user()
+        self.clear_entry()
+    
     def clear_entry(self):
         self.username_entry.delete(0, 'end')
         self.pwd_entry.delete(0, 'end')
@@ -153,23 +180,27 @@ class Page_UserRegistration(tk.Frame):
             self.register_title_label.config(text="No Username or Password was entered!", fg="red", font=('arial',10,'bold'))
         if self.Username.get() and self.Password.get():
             self.Server_Verify()
-            print(f"Username: {self.Username.get()} \n" + f"Password: {self.Password.get()}")
-            self.register_title_label.config(text="User Registration Successful!", fg="#211A52", font=('arial',10,'bold'))
             
-            
-        # Check with server is user is already registered  
         
     def Server_Verify(self):
         
         self.se = socket(AF_INET,SOCK_STREAM)
-        self.se.connect((SERVER_IP, VERIFY_PORT))
+        self.se.connect((SERVER_IP, VERIFY_PORT_REGISTER))
         data_User = self.Username.get()
         data_Pass = self.Password.get()
         self.data_string = pickle.dumps([data_User, data_Pass])
         self.se.send(self.data_string)
-        #data = self.se.recv(BUFFER_SIZE)
-        #data = pickle.loads(data)
-        #print("From Server: {}".format(data))
+        data = self.se.recv(BUFFER_SIZE)
+        data = pickle.loads(data)
+        print("From Server: {}".format(data))
+        
+        if data == "YES OK!":
+            print("OK from server :)")
+            print(f"Username: {self.Username.get()} \n" + f"Password: {self.Password.get()}")
+            self.register_title_label.config(text="User Registration Successful!", fg="#211A52", font=('arial',10,'bold'))
+        if data == "NOT OK!":
+            print("NOT OK from server :)")
+            self.register_title_label.config(text="User already registered!", fg="red", font=('arial',10,'bold'))            
         
         #self.s = socket(AF_INET,SOCK_STREAM)
         #self.s.connect((SERVER_IP, SERVER_PORT))
