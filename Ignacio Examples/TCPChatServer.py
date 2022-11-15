@@ -1,7 +1,7 @@
 import socket, threading, pickle
 import csv
 
-HOST = ''           # Symbolic name meaning all available interfaces
+HOST = '192.168.56.1'           # Symbolic name meaning all available interfaces
 BASE_PORT = 1234    # Arbitrary non-privileged port
 VERIFY_PORT = 1111  
 CONN_COUNTER = 0    # Counter for connections
@@ -12,6 +12,9 @@ ID_LIST = []
 PORT_IDS = []
 PORT_HANDLES = []
 
+SERVER = socket.gethostbyname(socket.gethostname())
+print(SERVER)
+
 class VerifyThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -21,6 +24,8 @@ class VerifyThread(threading.Thread):
         self.Usernames = []
         self.Passwords = []
         
+        if input() == "exit":
+            exit()
             
         while True:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

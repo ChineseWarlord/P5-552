@@ -1,11 +1,16 @@
 from socket import *
+
+import socket
 import threading
 import time
 import pickle
 
-SERVER_IP = "127.0.0.1"
+SERVER_IP = "192.168.56.1"
 SERVER_PORT = 1234
 BUFFER_SIZE = 1024
+
+SERVER = socket.gethostbyname(socket.gethostname())
+print(SERVER)
 
 class SendData(threading.Thread):
     def __init__(self,tcp_socket, user):

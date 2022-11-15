@@ -1,5 +1,7 @@
-import socket, threading, pickle
 import csv
+import pickle
+import threading
+from socket import *
 
 HOST = ''           # Symbolic name meaning all available interfaces
 BASE_PORT = 1234    # Arbitrary non-privileged port
@@ -12,10 +14,12 @@ ID_LIST = []
 PORT_IDS = []
 PORT_HANDLES = []
 
+
+PP = 65432  # Port to listen on (non-privileged ports are > 1023)
+
 class VerifyThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        PORT1 = 65432  # Port to listen on (non-privileged ports are > 1023)
         self.Data_User = []
         self.Data_Pass = []
         self.Usernames = []
@@ -23,13 +27,15 @@ class VerifyThread(threading.Thread):
         
             
         while True:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if input() == "exit":
+                exit()
+            self.s = socket(AF_INET, SOCK_STREAM)
+            self.s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             print("Working?")
-            s.bind((HOST, PORT1))
-            s.listen()
-            self.conn, addr = s.accept()
-            
+            self.s.bind((HOST, PP))
+            self.s.listen()
+            self.conn, addr = self.s.accept()
+        
             with self.conn:
                 print(f"Connected by {addr}")
                 data = self.conn.recv(BUFFER_SIZE)
@@ -37,58 +43,82 @@ class VerifyThread(threading.Thread):
                 print("Data: {}".format(self.data2))
                 self.Data_User = self.data2[0]
                 self.Data_Pass = self.data2[1]
+                self.Data_Check = self.data2[2]
                 self.Data_UserPass = self.data2[0]+self.data2[1]
                 print("Data_User: {}".format(self.Data_User))  
-                print("Data_Pass: {}".format(self.Data_Pass)) 
+                print("Data_Pass: {}".format(self.Data_Pass))
+                print("Data_Check: {}".format(self.Data_Check)) 
                 print("Data_UserPass: {}".format(self.Data_UserPass)) 
                 #text = "OK - Cancer"
                 #self.data_string = pickle.dumps(text)
                 #self.conn.send(self.data_string)
-                self.Check_User()
-                self.conn.close()
-                #print("Socket status: {}".format(s))
-            
-    def Check_User(self):
-            rows = [self.data2]
-            test1 = []
-            Data = self.Data_UserPass
-            
-            #testt = "hejfisk"
-            #test2.append(testt)
-            #print("test2 {}".format(test2))
-            #if Data in test2:
-            #    print("User: {}".format(Data))
-            #    test2.clear()
-            #    print("After test2 {}".format(test2))
                 
-            
-            with open('Users.csv', 'r') as f:
-                csv_reader = csv.reader(f, delimiter=',')
-                #next(csv_reader)
-                for line in csv_reader:
-                    cunt = line[0]+line[1]
-                    test1.append(cunt)
-                    print("cunt: {}".format(cunt))
-                    print("test1: {}".format(test1))
-                    
-                if Data in test1:
-                        print("NOT OK!")
-                        print("test1 not in data: {}".format(test1))
-                    
-                        text = "NOT OK!"
-                        self.data_string = pickle.dumps(text)
-                        self.conn.send(self.data_string)
-                if Data not in test1:
-                    test1.clear()
-                    print("test1 in data: {}".format(test1))
-                    with open('Users.csv', 'a', newline='') as f:
-                        csv_writer = csv.writer(f)
-                        csv_writer.writerows(rows)
-                        print("OK!")
+                self.data2.pop(2)
+                print("DELETED test: ", self.data2)
                 
-                        text = "YES OK!"
-                        self.data_string = pickle.dumps(text)
-                        self.conn.send(self.data_string) 
+                if self.Data_Check == "userregister":
+                    self.Check_User_Register()
+                    self.conn.close()
+                if self.Data_Check == "userlogin":
+                    self.Check_User_Login()
+                    self.conn.close()
+                
+    def Check_User_Login(self):
+        test1 = []
+        user_data = self.Data_UserPass
+            
+        with open('Users.csv', 'r') as f:
+            csv_reader = csv.reader(f, delimiter=',')
+            next(csv_reader)
+            for line in csv_reader:
+                cunt = line[0]+line[1]
+                test1.append(cunt)
+        if self.Data_UserPass in test1:
+            print("OK LOGIN!")
+            self.data_string = pickle.dumps("YES LOGIN!")
+            self.conn.send(self.data_string)     
+        if user_data not in test1:
+            print("NO LOGIN!")
+            test1.clear()
+            self.data_string = pickle.dumps("NO LOGIN!")
+            self.conn.send(self.data_string)
+    
+    def Check_User_Register(self):
+        rows = [self.data2]
+        #print("rows: {}".format(rows))
+        test1 = []
+        #print("test1: {}".format(test1))
+        user_data = self.Data_UserPass
+        #print("user_data: {}".format(user_data))
+            
+        with open('Users.csv', 'r') as f:
+            csv_reader = csv.reader(f, delimiter=',')
+            next(csv_reader)
+            for line in csv_reader:
+                #print("line: {}".format(line))
+                cunt = line[0]+line[1]
+                #print("cunt: {}".format(cunt))
+                test1.append(cunt)
+                #print("test1: {}".format(test1))
+                
+            print("user_data before if in test1: {}".format(user_data))
+            print("test1 if in: {}".format(test1))
+            if user_data in test1:
+                print("NOT OK!")
+                #print("test1 not in data: {}".format(test1))
+                self.data_string = pickle.dumps("NOT OK!")
+                self.conn.send(self.data_string)
+            #print("user_data before not in test1: {}".format(user_data))
+            #print("test1 if not in: {}".format(test1))
+            if user_data not in test1:
+                #print("test1 in data: {}".format(test1))
+                print("OK!")
+                test1.clear()
+                self.data_string = pickle.dumps("YES OK!")
+                self.conn.send(self.data_string) 
+                with open('Users.csv', 'a', newline='') as f:
+                    csv_writer = csv.writer(f)
+                    csv_writer.writerows(rows)
 
 
 class ClientThread(threading.Thread):
@@ -160,14 +190,14 @@ class ClientThread(threading.Thread):
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
 
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server = socket(AF_INET, SOCK_STREAM)
+server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
-print("Chat Server started.")
-print("Waiting for chat client connections...")
 while True:
     threadd = VerifyThread()
     threadd.start()
+    print("Chat Server started.")
+    print("Waiting for chat client connections...")
     server.listen(1)
     clientsock, clientAddress = server.accept()
     CONN_COUNTER=CONN_COUNTER+1
