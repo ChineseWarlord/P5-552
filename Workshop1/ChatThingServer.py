@@ -13,6 +13,7 @@ be able to decode messages
 
 import tkinter as tk
 from tkinter import ttk
+from PIL import ImageTk, Image 
 from socket import *
 import threading
 import time
@@ -24,12 +25,19 @@ VERIFY_PORT = 65432
 BUFFER_SIZE = 1024
 
 
+
 class Main_View(tk.Tk):
     def __init__(self):
-        super().__init__()
-        self.title("Awesome Chat Program!")
-        container = tk.Frame(self)
-        container.pack(side="top",fill="both",expand=True)
+        #super().__init__()
+        tk.Frame.__init__(self)
+        
+        #self.title("Awesome Chat Program!")
+        container = tk.Frame(root,
+                             width=1000,
+                             height=1000,
+                             highlightbackground="blue", 
+                             highlightthickness=0)
+        container.pack(side=tk.TOP,fill="both",expand=True)
         container.grid_rowconfigure(0, weight = 1)
         container.grid_columnconfigure(0, weight = 1)
           
@@ -40,8 +48,10 @@ class Main_View(tk.Tk):
             self.frames[FRAMES] = frame
             frame.grid()
             frame.grid(row = 0, column = 0, sticky ="nsew")
-  
+
+        
         self.show_frame(Page_Login)
+        #self.show_frame(Page_Chat)
         
     def show_frame(self, cont):
         frame = self.frames[cont]
@@ -54,21 +64,26 @@ class Page_Login(tk.Frame):
         self.controller = controller
         self.UsernameLogin = tk.StringVar()
         self.PasswordLogin = tk.StringVar()
-        
-        self.frame1 = tk.Frame(master=self, borderwidth=1, background="blue")
-        self.frame1.pack()
-        self.title_label = tk.Label(self.frame1, text="Awesome Chat Program!", font=('Arial',18,'bold'))
-        self.title_label.pack(side=tk.LEFT)
 
-        self.frame2 = tk.Frame(master=self, borderwidth=10, background="red")
+        #self.frame1 = tk.Frame(master=self, borderwidth=1, background="blue")
+        self.frame1 = tk.Frame(master=self, borderwidth=1, background="blue",
+                               highlightthickness=5)
+        self.frame1.pack(side=tk.TOP, fill='both',expand=True)
+        self.title_label = tk.Label(self.frame1, text="Awesome Chat Program!", font=('Arial',18,'bold'))
+        self.title_label.pack(side=tk.TOP, fill='both',expand=False)
+
+        self.frame2 = tk.Frame(self.frame1, borderwidth=10, background="red")
+        #self.frame2 = tk.Frame(root, borderwidth=10, background="red")
         self.frame2.pack()
         self.username_label = tk.Label(self.frame2,text="Username")
         self.username_label.pack(side=tk.LEFT)
         self.username_entry_login = tk.Entry(self.frame2, width=50,textvariable=self.UsernameLogin)
         self.username_entry_login.pack()
         self.username_entry_login.bind("<Return>",self.key_pressed)
+        self.username_entry_login.focus()
 
-        self.frame3 = tk.Frame(master=self, borderwidth=10, background="black")
+        self.frame3 = tk.Frame(self.frame1, borderwidth=10, background="black")
+        #self.frame3 = tk.Frame(root, borderwidth=10, background="black")
         self.frame3.pack()
         self.pwd_label = tk.Label(self.frame3,text="Password")
         self.pwd_label.pack(side=tk.LEFT)
@@ -76,7 +91,8 @@ class Page_Login(tk.Frame):
         self.pwd_entry_login.pack()
         self.pwd_entry_login.bind("<Return>",self.key_pressed)
         
-        self.frame4 = tk.Frame(master=self, borderwidth=10, background="green")
+        self.frame4 = tk.Frame(self.frame1, borderwidth=10, background="green")
+        #self.frame4 = tk.Frame(root, borderwidth=10, background="green")
         self.frame4.pack()
         self.login_button = tk.Button(self.frame4, text="Log In",command=lambda:[self.log_in(),self.clear_entry()], bg="#211A52", fg = "white")
         self.register_page_button = tk.Button(self.frame4, text="Register now",command=lambda : [controller.show_frame(Page_UserRegistration),self.clear_entry()], bg="#211A52", fg = "white")
@@ -207,18 +223,73 @@ class Page_Chat(tk.Frame):
         
         self.controller = controller
         
-        self.frame1 = tk.Frame(master=self, borderwidth=10, bg="blue")
-        self.frame1.pack()
-        self.register_title_label = tk.Label(self.frame1, text="Chat Window")
-        self.register_title_label.pack(side=tk.LEFT)
+        # Title label
+        self.frame_main = tk.Frame(self,
+                                   highlightbackground="red", 
+                                   highlightthickness=6,
+                                   bg="blue")
+        self.frame_main.pack(fill='both',expand=True)
+        self.chat_title = tk.Label(self.frame_main, 
+                                   text="Welcome to chat!", 
+                                   font=('Arial',18,'bold'),
+                                   bg="black", fg="white",
+                                   highlightbackground="blue",
+                                   highlightthickness=6)
+        self.chat_title.pack(side=tk.TOP,fill=tk.X, expand=False)
+                
+        # Left side chat menu
+        self.main_frame = tk.Frame(self.frame_main, 
+                                   bg="green",
+                                   borderwidth=10,
+                                   highlightbackground="magenta", 
+                                   highlightthickness=6)
+        self.main_frame.pack(side=tk.LEFT,expand=False,fill=tk.Y)
+        # Chat Menu + Settings label - top side in frame1
+        self.frame1 = tk.Frame(self.main_frame, bg="orange",borderwidth=10)
+        self.frame1.pack(side=tk.TOP,expand=False,fill=tk.X)
+        # User Frame
+        self.frame2 = tk.Frame(self.main_frame, bg="blue",borderwidth=5,highlightbackground="green", highlightthickness=4)
+        self.frame2.pack(side=tk.TOP,expand=True,fill='both', padx=10,pady=10)
+        # Exit Frame
+        self.frame3 = tk.Frame(self.main_frame, bg="black",borderwidth=5,highlightbackground="yellow", highlightthickness=4)
+        self.frame3.pack(side=tk.BOTTOM,expand=False,fill=tk.X)
         
-        self.frame4 = tk.Frame(master=self, borderwidth=10,bg="yellow")
-        self.frame4.pack()
+        # Chat + Settings label
+        #self.chat_label = tk.Label(self.frame1, text="Chat Menu", bg="yellow", fg="black", borderwidth=20)
+        #self.chat_label = tk.Label(self.frame1, text="Chat Menu",height=1, bg="yellow", fg="black",borderwidth=1,relief="raised")
+        self.chat_label = tk.Button(self.frame1, text="Chat Menu",height=1, bg="yellow", fg = "black", borderwidth=1,relief="raised")
+        self.chat_label.pack(side=tk.LEFT,fill=tk.X, expand=False,padx=1.5, pady=1.5)
         
-        self.return_button = tk.Button(self.frame4, text="Return",command=lambda : [controller.show_frame(Page_Login)], bg="#211A52", fg = "white")
-        self.return_button.pack(side=tk.LEFT)
+        self.add_user = tk.Button(self.frame1, text="+",height=1,command=lambda : [self.Add_Users()], bg="green", fg = "black", borderwidth=1,relief="raised")
+        self.add_user.pack(side=tk.LEFT,fill=tk.X, expand=False, padx=1.5, pady=1.5)
+        
+        self.settings_label = tk.Button(self.frame1, text="Settings",height=1,command=lambda : [controller.show_frame(Page_Login)], bg="magenta", fg = "black", borderwidth=1,relief="raised")
+        self.settings_label.pack(side=tk.RIGHT,fill=tk.X, expand=False, padx=1.5, pady=1.5)
+        
+        # EXIT button
+        self.return_button = tk.Button(self.frame3, text="EXIT",command=lambda : [controller.show_frame(Page_Login)], bg="#211A52", fg = "white")
+        self.return_button.pack(side=tk.TOP,expand=False)
+        #self.return_button.pack(side=tk.TOP)
+        
+        # Chat Window
+        self.frame4 = tk.Frame(self.frame_main,
+                               borderwidth=100, 
+                               bg="yellow",
+                               highlightbackground="green", 
+                               highlightthickness=6)
+        self.frame4.pack(side=tk.TOP,fill='both',expand=True)
+        
+    def Add_Users(self):
+        self.frame
         
 if __name__=="__main__":
-    myapp = Main_View()
-    myapp.mainloop()
+    #myapp = Main_View()
+    #myapp.mainloop()
     
+    root = tk.Tk()
+    #root = tk.Toplevel()
+    root.geometry("500x350")
+    root.title("Cringe!")
+    
+    root = Main_View()
+    root.mainloop()

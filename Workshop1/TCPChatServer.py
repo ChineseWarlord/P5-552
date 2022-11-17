@@ -2,10 +2,10 @@ import csv
 import pickle
 import threading
 from socket import *
+from multiprocessing import Process
 
 HOST = ''           # Symbolic name meaning all available interfaces
 BASE_PORT = 1234    # Arbitrary non-privileged port
-VERIFY_PORT = 1111  
 CONN_COUNTER = 0    # Counter for connections
 BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
 MAX_USERS = 99
@@ -25,41 +25,37 @@ class VerifyThread(threading.Thread):
         self.Usernames = []
         self.Passwords = []
         
-            
         while True:
-            if input() == "exit":
-                exit()
             self.s = socket(AF_INET, SOCK_STREAM)
             self.s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             print("Working?")
             self.s.bind((HOST, PP))
             self.s.listen()
             self.conn, addr = self.s.accept()
-        
-            with self.conn:
-                print(f"Connected by {addr}")
-                data = self.conn.recv(BUFFER_SIZE)
-                self.data2 = pickle.loads(data)
-                print("Data: {}".format(self.data2))
-                self.Data_User = self.data2[0]
-                self.Data_Pass = self.data2[1]
-                self.Data_Check = self.data2[2]
-                self.Data_UserPass = self.data2[0]+self.data2[1]
-                print("Data_User: {}".format(self.Data_User))  
-                print("Data_Pass: {}".format(self.Data_Pass))
-                print("Data_Check: {}".format(self.Data_Check)) 
-                print("Data_UserPass: {}".format(self.Data_UserPass)) 
-                #text = "OK - Cancer"
-                #self.data_string = pickle.dumps(text)
-                #self.conn.send(self.data_string)
-                
-                self.data2.pop(2)
-                print("DELETED test: ", self.data2)
-                
-                if self.Data_Check == "userregister":
+
+            #with self.conn:
+            print(f"Connected by {addr}")
+            data = self.conn.recv(BUFFER_SIZE)
+            self.data2 = pickle.loads(data)
+            print("Data: {}".format(self.data2))
+            self.Data_User = self.data2[0]
+            self.Data_Pass = self.data2[1]
+            self.Data_Check = self.data2[2]
+            self.Data_UserPass = self.data2[0]+self.data2[1]
+            print("Data_User: {}".format(self.Data_User))  
+            print("Data_Pass: {}".format(self.Data_Pass))
+            print("Data_Check: {}".format(self.Data_Check)) 
+            print("Data_UserPass: {}".format(self.Data_UserPass)) 
+            #text = "OK - Cancer"
+            #self.data_string = pickle.dumps(text)
+            #self.conn.send(self.data_string)
+            self.data2.pop(2)
+            print("DELETED test: ", self.data2)
+
+            if self.Data_Check == "userregister":
                     self.Check_User_Register()
                     self.conn.close()
-                if self.Data_Check == "userlogin":
+            if self.Data_Check == "userlogin":
                     self.Check_User_Login()
                     self.conn.close()
                 
@@ -101,8 +97,8 @@ class VerifyThread(threading.Thread):
                 test1.append(cunt)
                 #print("test1: {}".format(test1))
                 
-            print("user_data before if in test1: {}".format(user_data))
-            print("test1 if in: {}".format(test1))
+            #print("user_data before if in test1: {}".format(user_data))
+            #print("test1 if in: {}".format(test1))
             if user_data in test1:
                 print("NOT OK!")
                 #print("test1 not in data: {}".format(test1))
@@ -146,8 +142,8 @@ class ClientThread(threading.Thread):
             NEW_PORT=BASE_PORT+self.counter
             print(NEW_PORT)
             self.portids.append(NEW_PORT)
-            dedicatedserver = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            dedicatedserver.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            dedicatedserver = socket(AF_INET, SOCK_STREAM)
+            dedicatedserver.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             dedicatedserver.bind((HOST, NEW_PORT))
             connect_ok_list=["OK",indid,onlineusers,NEW_PORT]
             data_string = pickle.dumps(connect_ok_list)
@@ -193,18 +189,25 @@ class ClientThread(threading.Thread):
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
-while True:
-    threadd = VerifyThread()
-    threadd.start()
+
+if __name__=="__main__":
     print("Chat Server started.")
     print("Waiting for chat client connections...")
-    server.listen(1)
-    clientsock, clientAddress = server.accept()
-    CONN_COUNTER=CONN_COUNTER+1
-    newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
-    newthread.start()
+    while True:
+        process = Process(target=VerifyThread)
+        process.start()
+        
+        #threadd = VerifyThread()
+        #threadd.start()
+        
+        server.listen(1)
+        clientsock, clientAddress = server.accept()
+        CONN_COUNTER=CONN_COUNTER+1
+        newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
+        newthread.start()
+        
+        #process2 = Process(target=ClientThread, args=(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES))
+        #process2.start()
+
     
-    send_data = input()
-    if send_data == "EEXIT" or send_data == "eexit":
-        break
     
