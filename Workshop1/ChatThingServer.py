@@ -74,9 +74,6 @@ class Page_Login(tk.Frame):
         
         print("PAGE_LOGIN Am I printing this? 1")
         
-        #root.add_page("Page_UserRegister",Page_UserRegister)
-
-        #self.frame1 = tk.Frame(master=self, borderwidth=1, background="blue")
         self.frame_master = tk.Frame(master=self, 
                                borderwidth=1, 
                                background="blue",
