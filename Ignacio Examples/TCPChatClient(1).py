@@ -36,7 +36,6 @@ class ReceiveData(threading.Thread):
             recv_string =self.ds.recv(BUFFER_SIZE)
             recv_data = pickle.loads(recv_string)
             print("{}: {}".format(recv_data[0],recv_data[1]))
-
 USERNAME = input("Welcome to the chat. Enter your username: ")
 print("Welcome {}. Initializing connection to the server.".format(USERNAME))
 s = socket(AF_INET,SOCK_STREAM)

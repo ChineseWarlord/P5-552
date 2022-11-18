@@ -156,7 +156,7 @@ class ClientThread(threading.Thread):
             while True:
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
-                if recv_data[0] == "EEXIT":
+                if recv_data[1] == "EEXIT":
                     self.usernames.remove(uusername)
                     print(self.usernames)
                     self.portids.remove(NEW_PORT)
