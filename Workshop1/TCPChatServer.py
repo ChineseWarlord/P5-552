@@ -72,12 +72,14 @@ class VerifyThread(threading.Thread):
         if user_data in test1:
             print("OK LOGIN!")
             self.data_string = pickle.dumps("YES LOGIN!#{}#{}".format(self.Data_User,self.Data_Pass))
-            self.conn.send(self.data_string)     
+            self.conn.send(self.data_string)
+            #self.conn.close()    
         if user_data not in test1:
             print("NO LOGIN!")
             test1.clear()
             self.data_string = pickle.dumps("NO LOGIN!")
             self.conn.send(self.data_string)
+            #self.conn.close()
     
     def Check_User_Register(self):
         rows = [self.data2]
@@ -104,6 +106,7 @@ class VerifyThread(threading.Thread):
                 #print("test1 not in data: {}".format(test1))
                 self.data_string = pickle.dumps("NOT OK!")
                 self.conn.send(self.data_string)
+                #self.conn.close()
             #print("user_data before not in test1: {}".format(user_data))
             #print("test1 if not in: {}".format(test1))
             if user_data not in test1:
@@ -112,9 +115,19 @@ class VerifyThread(threading.Thread):
                 test1.clear()
                 self.data_string = pickle.dumps("YES OK!")
                 self.conn.send(self.data_string) 
+                #self.conn.close()
                 with open('Users.csv', 'a', newline='') as f:
                     csv_writer = csv.writer(f)
                     csv_writer.writerows(rows)
+    
+    def UserData(self):
+        # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
+        # In server check if the user, trying to be added, is in database - if in database add user to USER_DATA
+        # When logged in, connect to server and load USER_DATA into chat menu window
+        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
+        print()
+                        
+            
 
 
 class ClientThread(threading.Thread):

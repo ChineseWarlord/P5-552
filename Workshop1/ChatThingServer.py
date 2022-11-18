@@ -61,9 +61,7 @@ class Main_View(tk.Tk):
     def show_frame(self, Page): 
         frame = self.frames[Page]
         frame.tkraise()
-
-
-        
+     
 class Page_Login(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -357,8 +355,6 @@ class Page_Chat(tk.Frame):
         self.Add_User_Button = tk.Button(self.frameadd_User_BUT, text="Add user",command=lambda : [self.AddShit(),self.clear_entry()], bg="#211A52", fg = "white")
         self.Add_User_Button.pack(side=tk.BOTTOM)
         
-        
-        
     def AddShit(self):
         # When login - remember username and add a file to store added users.
         # After login read through file with stored added users and load them into frame.
@@ -373,7 +369,14 @@ class Page_Chat(tk.Frame):
         self.Add_User_Frame.withdraw()
         
     def doshit(self):
-        print("Do shit")      
+        print("Do shit")   
+        
+    def test(self):
+        # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
+        # In server check if the user, trying to be added, is in database - if in database add user to USER_DATA
+        # When logged in, connect to server and load USER_DATA into chat menu window
+        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
+        print()   
  
  
 
