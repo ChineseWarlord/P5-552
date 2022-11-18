@@ -37,26 +37,32 @@ class Main_View(tk.Tk):
         tk.Frame.__init__(self)
         
         #self.title("Awesome Chat Program!")
-        container = tk.Frame(root)
-        container.pack(side=tk.TOP,fill="both",expand=True)
-        container.grid_rowconfigure(0, weight = 1)
-        container.grid_columnconfigure(0, weight = 1)
+        self.container = tk.Frame(root)
+        self.container.pack(side=tk.TOP,fill="both",expand=True)
+        self.container.grid_rowconfigure(0, weight = 1)
+        self.container.grid_columnconfigure(0, weight = 1)
           
-        self.frames = {}
-        
-        for FRAMES in (Page_Login, Page_UserRegistration, Page_Chat):
-            frame = FRAMES(container,self)
-            self.frames[FRAMES] = frame
-            frame.grid()
-            frame.grid(row = 0, column = 0, sticky ="nsew")
+        #self.frames = {}
+        #for FRAMES in (Page_Login, Page_UserRegistration, Page_Chat):
+        #    frame = FRAMES(container,self)
+        #    self.frames[FRAMES] = frame
+        #    frame.grid()
+        #    frame.grid(row = 0, column = 0, sticky ="nsew")
 
         
-        self.show_frame(Page_Login)
+        #self.show_frame(Page_Login)
         #self.show_frame(Page_Chat)
+        self.frames = {}
         
-    def show_frame(self, cont):
-        frame = self.frames[cont]
+    def add_page(self,Name, Page):
+        self.frames[Name] = Page(parent=self.container,controller=self)    
+        self.frames[Name].grid(row=0, column=0, sticky="nsew")
+        
+    def show_frame(self, Page): 
+        frame = self.frames[Page]
         frame.tkraise()
+
+
         
 class Page_Login(tk.Frame):
     def __init__(self, parent, controller):
@@ -66,6 +72,9 @@ class Page_Login(tk.Frame):
         self.UsernameLogin = tk.StringVar()
         self.PasswordLogin = tk.StringVar()
         
+        print("PAGE_LOGIN Am I printing this? 1")
+        
+        #root.add_page("Page_UserRegister",Page_UserRegister)
 
         #self.frame1 = tk.Frame(master=self, borderwidth=1, background="blue")
         self.frame_master = tk.Frame(master=self, 
@@ -105,10 +114,8 @@ class Page_Login(tk.Frame):
         #self.frame4 = tk.Frame(root, borderwidth=10, background="green")
         self.frame4.pack(side=tk.TOP,expand=False)
         
-        tester = Page_Chat(self,self)
-        
         self.login_button = tk.Button(self.frame4, text="Log In",command=lambda : [self.log_in(),self.clear_entry(), ], bg="#211A52", fg = "white")
-        self.register_page_button = tk.Button(self.frame4, text="Register now",command=lambda : [controller.show_frame(Page_UserRegistration),self.clear_entry(),tester.ReturnUsername()], bg="#211A52", fg = "white")
+        self.register_page_button = tk.Button(self.frame4, text="Register now",command=lambda : [self.register_user(),self.clear_entry()], bg="#211A52", fg = "white")
         self.login_button.pack(side=tk.LEFT)
         self.register_page_button.pack(side=tk.RIGHT)
         
@@ -120,7 +127,10 @@ class Page_Login(tk.Frame):
     def clear_entry(self):
         self.username_entry_login.delete(0, 'end')
         self.pwd_entry_login.delete(0, 'end')
-        
+     
+    def register_user(self):
+        root.add_page("Page_UserRegister",Page_UserRegister)
+           
     def log_in(self):
         print("USER: "+self.UsernameLogin.get())
         print("PASS: "+self.PasswordLogin.get())
@@ -129,11 +139,11 @@ class Page_Login(tk.Frame):
         self.se.connect((SERVER_IP, VERIFY_PORT))
         
         
-        stupidusername = self.UsernameLogin.get()
-        print("stupidusername: {}".format(stupidusername))  
-        tester = Page_Chat(self,self)
-        cancer = tester.ReturnUsername(stupidusername)
-        print("stupidusername11: {}".format(cancer))  
+        #stupidusername = self.UsernameLogin.get()
+        #print("stupidusername: {}".format(stupidusername))  
+        #tester = Page_Chat(self,self)
+        #cancer = tester.ReturnUsername(stupidusername)
+        #print("stupidusername11: {}".format(cancer))  
         
         data_User = self.UsernameLogin.get()
         data_Pass = self.PasswordLogin.get()
@@ -145,22 +155,28 @@ class Page_Login(tk.Frame):
         self.se.send(self.data_string)
         data = self.se.recv(BUFFER_SIZE)
         data = pickle.loads(data)
+        data = data.split('#')
         print("From Server: {}".format(data))
             
-        if data == "YES LOGIN!":
+        if data[0] == "YES LOGIN!":
             print("OK LOGIN :)")
             print(f"Username: {self.UsernameLogin.get()} \n" + f"Password: {self.PasswordLogin.get()}")
             self.title_label.config(text="Awesome Chat Program!", fg="black", font=('Arial',18,'bold'))
-            self.controller.show_frame(Page_Chat)
-        if data == "NO LOGIN!":
+            global stupidusername
+            stupidusername = data[1]
+            print("From Server stupidusername: {}".format(stupidusername))
+            root.add_page("Page_Chat",Page_Chat)
+            #root.show_frame("Page_Chat")
+        if data[0] == "NO LOGIN!":
             print("NOT LOGIN :(")
-            self.title_label.config(text="Incorrect username and/or password!", fg="red", font=('arial',10,'bold'))
+            self.title_label.config(text="Incorrect username and/or password!", fg="red", font=('arial',10,'bold'))      
            
-           
-class Page_UserRegistration(tk.Frame):
+class Page_UserRegister(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
         
+        print("PAGE_USERREGISTER Am I printing this? 1")
+         
         self.controller = controller
         self.Username = tk.StringVar()
         self.Password = tk.StringVar()
@@ -192,9 +208,12 @@ class Page_UserRegistration(tk.Frame):
         self.register_button.pack(side=tk.LEFT)
         
         
-        self.return_button = tk.Button(self.frame4, text="Return",command=lambda : [controller.show_frame(Page_Login),self.clear_entry()], bg="#211A52", fg = "white")
+        self.return_button = tk.Button(self.frame4, text="Return",command=lambda : [self.return_to_login(),self.clear_entry()], bg="#211A52", fg = "white")
         self.return_button.pack(side=tk.LEFT)
         self.register_title_label.config(text="User Registration")
+    
+    def return_to_login(self):
+        root.show_frame("Page_Login")
     
     def key_pressed(self, event):
         self.register_user()
@@ -234,12 +253,14 @@ class Page_UserRegistration(tk.Frame):
         if data == "NOT OK!":
             print("NOT OK from server :)")
             self.register_title_label.config(text="User already registered!", fg="red", font=('arial',10,'bold'))            
-         
+
 class Page_Chat(tk.Frame):
     def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
         
         self.controller = controller
+        
+        print("PAGE_CHAT Am I printing this? 1")
         
         # Title label
         self.frame_main = tk.Frame(self,
@@ -247,8 +268,13 @@ class Page_Chat(tk.Frame):
                                    highlightthickness=6,
                                    bg="blue")
         self.frame_main.pack(fill='both',expand=True)
+        
+        global stupidusername
+        stupidusername1 = stupidusername
+        print("STUPIDUSERNAME: {}".format(stupidusername1))
+        
         self.chat_title = tk.Label(self.frame_main, 
-                                   text="Welcome! ", 
+                                   text="Welcome {}!".format(stupidusername), 
                                    font=('Arial',18,'bold'),
                                    bg="black", fg="white",
                                    highlightbackground="blue",
@@ -283,11 +309,11 @@ class Page_Chat(tk.Frame):
         self.add_user = tk.Button(self.frame1, text="+",font=('arial',10,'bold'),height=1,command=lambda : [self.Add_Users_Window()], bg="white", fg = "black", borderwidth=1,relief="raised")
         self.add_user.pack(side=tk.LEFT,fill=tk.X, expand=True, padx=1.5, pady=1.5)
         
-        self.settings_label = tk.Button(self.frame1, text="Settings",font=('arial',10,'bold'),height=1,command=lambda : [controller.show_frame(Page_Login)], bg="magenta", fg = "black", borderwidth=1,relief="raised")
+        self.settings_label = tk.Button(self.frame1, text="Settings",font=('arial',10,'bold'),height=1,command=lambda : [], bg="magenta", fg = "black", borderwidth=1,relief="raised")
         self.settings_label.pack(side=tk.LEFT,fill=tk.X, expand=True, padx=1.5, pady=1.5)
         
         # EXIT button
-        self.return_button = tk.Button(self.frame3, text="EXIT",command=lambda : [controller.show_frame(Page_Login)], bg="#211A52", fg = "white")
+        self.return_button = tk.Button(self.frame3, text="EXIT",command=lambda : [root.show_frame("Page_Login")], bg="#211A52", fg = "white")
         self.return_button.pack(side=tk.TOP,expand=False)
         #self.return_button.pack(side=tk.TOP)
         
@@ -300,17 +326,6 @@ class Page_Chat(tk.Frame):
         self.frame4.pack(side=tk.TOP,fill='both',expand=True)
         self.Chat_Label = tk.Label(self.frame4,text="Chat Window", bg="green", fg="white",font=('arial',10,'bold'), borderwidth=1)
         self.Chat_Label.pack(fill='both',expand=True)
-        
-    def ReturnUsername(self, stupidusername1):
-        self.stupid = stupidusername1
-        print("stupid 12312: {}".format(self.stupid))
-        self.chat_title.config(text="Welcome!123123 {}".format(self.stupid),
-                                    font=('Arial',18,'bold'),
-                                   bg="black", fg="white",
-                                   highlightbackground="blue",
-                                   highlightthickness=6)
-        
-        return self.stupid
     
     def key_pressed(self, event):
         self.AddShit()
@@ -370,4 +385,7 @@ if __name__=="__main__":
     #myapp.mainloop()
 
     root = Main_View()
+    root.add_page("Page_Login",Page_Login)
+    #root.add_page("Page_UserRegister",Page_UserRegister)
+    root.show_frame("Page_Login")
     root.mainloop()

@@ -69,9 +69,9 @@ class VerifyThread(threading.Thread):
             for line in csv_reader:
                 cunt = line[0]+line[1]
                 test1.append(cunt)
-        if self.Data_UserPass in test1:
+        if user_data in test1:
             print("OK LOGIN!")
-            self.data_string = pickle.dumps("YES LOGIN!")
+            self.data_string = pickle.dumps("YES LOGIN!#{}#{}".format(self.Data_User,self.Data_Pass))
             self.conn.send(self.data_string)     
         if user_data not in test1:
             print("NO LOGIN!")
