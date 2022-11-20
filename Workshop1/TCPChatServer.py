@@ -58,6 +58,9 @@ class VerifyThread(threading.Thread):
             if self.Data_Check == "userlogin":
                     self.Check_User_Login()
                     self.conn.close()
+            if self.Data_Check == "UserAdd":
+                    self.Add_User()
+                    self.conn.close()
                 
     def Check_User_Login(self):
         test1 = []
@@ -69,6 +72,7 @@ class VerifyThread(threading.Thread):
             for line in csv_reader:
                 cunt = line[0]+line[1]
                 test1.append(cunt)
+                #print("test1: {}".format(test1))
         if user_data in test1:
             print("OK LOGIN!")
             self.data_string = pickle.dumps("YES LOGIN!#{}#{}".format(self.Data_User,self.Data_Pass))
@@ -119,6 +123,7 @@ class VerifyThread(threading.Thread):
                 with open('Users.csv', 'a', newline='') as f:
                     csv_writer = csv.writer(f)
                     csv_writer.writerows(rows)
+               
     
     def UserData(self):
         # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
@@ -169,6 +174,8 @@ class ClientThread(threading.Thread):
             while True:
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
+                #print("recv_data: {}".format(recv_data))
+                
                 if recv_data[1] == "EEXIT":
                     self.usernames.remove(uusername)
                     print(self.usernames)
@@ -199,6 +206,18 @@ class ClientThread(threading.Thread):
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
 
+
+
+
+
+
+class ChatThread(threading.Thread):
+    def __init__(self,clientAddress,clientsocket,user,ip):
+        threading.Thread.__init__(self)
+        dedicatedserver = socket(AF_INET, SOCK_STREAM)
+        dedicatedserver.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        dedicatedserver.bind((HOST, BASE_PORT+1))
+    
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
@@ -215,6 +234,15 @@ if __name__=="__main__":
         
         server.listen(1)
         clientsock, clientAddress = server.accept()
+        #CheckUser = server.recv(BUFFER_SIZE)
+        #CheckUserData = pickle.loads(CheckUser)
+        #print("CheckUserData: {}".format(CheckUserData))
+        # Data Structure: [Username, IP to connect to]
+        # new server to host chat
+        # NewThread = ChatThread(clientAddress, clientsock, CheckUserData[0], CheckUserData[1])
+        # NewThread.start()
+        
+        print("Clientsock: {}\n ClientAddress: {}".format(clientsock, clientAddress))
         CONN_COUNTER=CONN_COUNTER+1
         newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
         newthread.start()
