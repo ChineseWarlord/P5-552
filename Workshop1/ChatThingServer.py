@@ -174,12 +174,14 @@ class Page_Login(tk.Frame):
             global stupidusername
             stupidusername = self.data[1]
             print("From Server stupidusername: {}".format(stupidusername))
+            self.clear_entry()
             root.add_page("Page_Chat",Page_Chat)
             print("Login socket status: {}".format(self.se))
-            self.LoadUsers() 
+            #self.LoadUsers() 
             #root.show_frame("Page_Chat")
         if self.data[0] == "NO LOGIN!":
             print("NOT LOGIN :(")
+            self.clear_entry()
             self.title_label.config(text="Incorrect username and/or password!", fg="red", font=('arial',10,'bold'))
             self.se.close()      
             print("Login socket status: {}".format(self.se)) 
@@ -345,7 +347,8 @@ class Page_Chat(tk.Frame):
         self.Chat_Label.pack(fill='both',expand=True)
     
     def key_pressed(self, event):
-        self.AddShit()
+        #self.AddShit()
+        self.testthis()
         self.clear_entry()  
           
     def clear_entry(self):
@@ -354,17 +357,23 @@ class Page_Chat(tk.Frame):
     def Add_Users_Window(self):
         self.Add_User_Frame = tk.Toplevel(root)
         self.Add_User_Frame.title("Add User")
-        self.Add_User_Frame.geometry("300x100")
+        self.Add_User_Frame.geometry("300x200")
         self.Add_User_Frame.resizable(False, False)
         
         self.UsernameAdd = tk.StringVar()
         
         self.frameadd = tk.Frame(self.Add_User_Frame, borderwidth=10, bg="red")
         self.frameadd.pack(side=tk.TOP,fill='both',expand=True)
+        self.frameadd_User_TRY = tk.Frame(self.frameadd, borderwidth=2, bg="Yellow")
+        self.frameadd_User_TRY.pack(side=tk.TOP)
         self.frameadd_User = tk.Frame(self.frameadd, borderwidth=5, bg="Blue")
         self.frameadd_User.pack(side=tk.TOP)
         self.frameadd_User_BUT = tk.Frame(self.frameadd, borderwidth=5, bg="Green")
         self.frameadd_User_BUT.pack(side=tk.TOP)
+        
+        self.username_tryadd_label = tk.Label(self.frameadd_User_TRY,text="Add user")
+        self.username_tryadd_label.pack(side=tk.LEFT,padx=5, pady=5)
+        
         
         self.username_label = tk.Label(self.frameadd_User,text="Username:")
         self.username_label.pack(side=tk.LEFT,padx=5, pady=5)
@@ -396,18 +405,27 @@ class Page_Chat(tk.Frame):
         # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
         self.se = socket(AF_INET,SOCK_STREAM)
         self.se.connect((SERVER_IP, VERIFY_PORT))
+        
         TryToAddUser = self.UsernameAdd.get()
         self.data_string = pickle.dumps([TryToAddUser," ", "UserAdd"])
         self.se.send(self.data_string)
-        data = self.se.recv(BUFFER_SIZE)
-        data = pickle.loads(data)
-        print("From Server: {}".format(data))
+        datax = self.se.recv(BUFFER_SIZE)
+        datax = pickle.loads(datax)
+        print("From Server: {}".format(datax))
+        datax = datax.split('#')
+        print("From Server2: {}".format(datax))
+        print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
         
-        if data == "YES USER!":
+        if datax[1] == TryToAddUser:
             print("USER ADDED")
-            print(f"Username: {self.Username.get()} \n" + f"Password: {self.Password.get()}")
-        if data == "NOT USER!":
-            print("USER DOES NOT EXIST")
+            self.Add_User_Frame.withdraw()
+        if datax[0] == "ALREADY IN FRIENDLIST!":
+            print("USER ALREADY IN FRIENDLIST")
+            self.username_tryadd_label.config(text="User already in friendlist", fg="red", font=('arial',10,'bold'))
+        if datax[0] == "TRIED TO ADD YOURSELF!":
+            print("TRIED TO ADD YOURSELF!")
+            self.username_tryadd_label.config(text="Tried to add yourself!", fg="red", font=('arial',10,'bold'))
+            
         # In server check if the user, trying to be added, is in database - if in database add user to USER_DATA
         
         print()   
@@ -445,31 +463,6 @@ class Page_Chat(tk.Frame):
     def OpenUserChat(self,User,IP):
         self.User = User
         self.IP = IP
-        
-        self.UserChatSocket0 = socket(AF_INET,SOCK_STREAM)
-        self.UserChatSocket0.connect((SERVER_IP, SERVER_PORT))
-        connect_list=["CONNECT",self.User]
-        data_string = pickle.dumps(connect_list)
-        self.UserChatSocket0.send(data_string)
-        data = self.UserChatSocket0.recv(BUFFER_SIZE)
-        data_list = pickle.loads(data)
-        print("{}".format(data_list[0]))
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
         
         self.chat_box = tk.Text(self.frame4, height=8)
         self.chat_box.configure(state="disabled")

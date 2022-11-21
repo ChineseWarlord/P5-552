@@ -66,3 +66,5 @@ Workshop1/tempCodeRunnerFile.py
 Workshop1/Users.csv
 Workshop1/Images
 Workshop1/env
+Workshop1/*.env
+Workshop1/*.csv
