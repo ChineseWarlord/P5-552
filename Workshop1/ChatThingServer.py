@@ -209,6 +209,7 @@ class Page_UserRegister(tk.Frame):
         self.username_entry = tk.Entry(self.frame2, width=50,textvariable=self.Username)
         self.username_entry.pack()
         self.username_entry.bind("<Return>",self.key_pressed)
+        self.username_entry.focus()
 
         self.frame3 = tk.Frame(master=self, borderwidth=10, bg="green")
         self.frame3.pack()
@@ -521,7 +522,7 @@ class Page_Chat(tk.Frame):
                 
     def shitmyself(self):
         print("I definitely shat myself..")    
-           
+    """       
     def callback(self):
         global labelClicked
         labelClicked = not labelClicked
@@ -536,32 +537,35 @@ class Page_Chat(tk.Frame):
                 
         else:
             self.removeChatWindows()
-            
+    """
         
     def OpenUserChat(self,friend,count):
         #self.removeChatWindows()
-        
+        conn_counter = 0
         for i in range(len(self.LoadedUserLabels)):
             friendlist = self.dataLoaded[i]
             #friendlist.append(friend)
-            print("What is i? {}".format(i))
-            print("what is friend name!: {}".format(friend))
-            print("what is friendlist !: {}".format(friendlist))
+            #print("What is i? {}".format(i))
+            #print("what is friend name!: {}".format(friend))
+            #print("what is friendlist !: {}".format(friendlist))
             #print("what is friendlist !: {}".format(friendlist[i]))
             
+            """"
             if i == count:
-                #self.LoadedUserLabels[i].config(state="disabled")
+                self.LoadedUserLabels[i].config(state="disabled")
                 #print("what is friend name: {}".format(friend))
                 print()
             else:
                 #print("what is this loadeduserlabels[{}]2: {}".format(i,self.LoadedUserLabels[i]))
                # print("what is friend name2: {}".format(friend))
                 self.LoadedUserLabels[i].config(state="normal")
+            """
             for x in range(len(friendlist)):
                 if friend == friendlist:
                     self.removeChatWindows()
                     print("what is friend name???: {}".format(friend))
                     print("what iter is friendlist? {}".format(friendlist))
+                    
                     self.ChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
                     self.ChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
                     self.userchatLabel = tk.Label(self.ChatWindowUserFrame,text="{}'s Chat".format(friend),bg="magenta", fg="black",font=('arial',10,'bold'), borderwidth=1)
@@ -578,36 +582,44 @@ class Page_Chat(tk.Frame):
                     self.button['command'] = self.send_message_button
                     self.button.pack()
                     #self.userchatLabel.config(text="{}'s Chat".format(friendlist),bg="magenta", fg="white",font=('arial',10,'bold'), borderwidth=1)
+                    print("Do I reach this? 1")
+                    new_port = 2000
+                    print("new_port: {}".format(new_port))
+                    self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
+                    print("Do I reach this? 2")
+                    self.UserChatSocket1.connect((SERVER_IP, new_port))
+                    conn_counter += 1
+                    print("Do I reach this? 3")
+                    connect_list=["CONNECT",stupidusername]
+                    data_string = pickle.dumps(connect_list)
+                    print("Do I reach this? 4")
+                    self.UserChatSocket1.send(data_string)
+                    print("Do I reach this? 5")
+                    data = self.UserChatSocket1.recv(BUFFER_SIZE)
+                    print("Do I reach this? 6")
+                    data_list = pickle.loads(data)
+                    print("Do I reach this? 7")
+                    print("{}".format(data_list[0]))
+                    if data_list[0]=="OK":
+                        self.chat_box.configure(state="normal")
+                        self.chat_box.insert('1.0', 'Reply from server: you are now connected.\n')
+                        self.chat_box.insert('2.0', 'There {} online users right now.'.format(data_list[2]))
+                        self.chat_box.configure(state="disabled")
+                        NEW_PORT=data_list[3]
+                        print(NEW_PORT)
+                        UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
+                        UserChatSocket2.connect((SERVER_IP, NEW_PORT))
+                        self.event = threading.Event()
+                        self.thread1 = SendData(UserChatSocket2,stupidusername, self.input_field, self.chat_box)
+                        self.thread2 = ReceiveData(UserChatSocket2, self.chat_box, self.event)
+                        self.thread2.start()
+                    else:
+                        print("Reply from server: server is full. Retry later.")
+        
+        self.input_field.bind("<Return>", self.send_message_enter)
         
         #print("global click: {}".format(labelClicked))
         
-        
-        #self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
-        #self.UserChatSocket1.connect((SERVER_IP, SERVER_PORT))
-        #connect_list=["CONNECT",self.User]
-        #data_string = pickle.dumps(connect_list)
-        #self.UserChatSocket1.send(data_string)
-        #data = self.UserChatSocket1.recv(BUFFER_SIZE)
-        #data_list = pickle.loads(data)
-        #print("{}".format(data_list[0]))
-#
-        #if data_list[0]=="OK":
-        #    self.chat_box.configure(state="normal")
-        #    self.chat_box.insert('1.0', 'Reply from server: you are now connected.\n')
-        #    self.chat_box.insert('2.0', 'There {} online users right now.'.format(data_list[2]))
-        #    self.chat_box.configure(state="disabled")
-        #    NEW_PORT=data_list[3]
-        #    print(NEW_PORT)
-        #    UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
-        #    UserChatSocket2.connect((self.IP, NEW_PORT))
-        #    self.event = threading.Event()
-        #    self.thread1 = SendData(UserChatSocket2,self.User, self.input_field, self.chat_box)
-        #    self.thread2 = ReceiveData(UserChatSocket2, self.chat_box, self.event)
-        #    self.thread2.start()
-        #else:
-        #    print("Reply from server: server is full. Retry later.")
-        #
-        #self.input_field.bind("<Return>", self.send_message_enter)
         
     def send_message_button(self):
         self.thread1.send()

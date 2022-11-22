@@ -38,8 +38,10 @@ class ReceiveData(threading.Thread):
             print("{}: {}".format(recv_data[0],recv_data[1]))
 USERNAME = input("Welcome to the chat. Enter your username: ")
 print("Welcome {}. Initializing connection to the server.".format(USERNAME))
+PORTTOCONNECT = input("Connect to port: ")
+
 s = socket(AF_INET,SOCK_STREAM)
-s.connect((SERVER_IP, SERVER_PORT))
+s.connect((SERVER_IP, int(PORTTOCONNECT)))
 connect_list=["CONNECT",USERNAME]
 data_string = pickle.dumps(connect_list)
 s.send(data_string)
