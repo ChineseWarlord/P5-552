@@ -67,4 +67,4 @@ Workshop1/Users.csv
 Workshop1/Images
 Workshop1/env
 Workshop1/*.env
-Workshop1/*.csv
+Workshop1/UserData/*.csv

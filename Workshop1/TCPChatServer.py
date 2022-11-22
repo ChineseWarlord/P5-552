@@ -5,6 +5,7 @@ from socket import *
 from multiprocessing import Process
 
 HOST = ''           # Symbolic name meaning all available interfaces
+LOAD_USER_PORT = 1000
 BASE_PORT = 1234    # Arbitrary non-privileged port
 CONN_COUNTER1 = 0    # Counter for connections
 CONN_COUNTER2 = 0    # Counter for connections
@@ -112,23 +113,28 @@ class VerifyThread(threading.Thread):
                     #print("REMOVED SAME USER!")
                     
             #print("test1: {}".format(test1))
+            print("\nLoginName: {}".format(LoginName))
+            print("user_name: {}\n".format(user_name))
             if LoginName == user_name:
                 print("TRIED TO ADD YOURSELF!")
                 self.data_string = pickle.dumps("TRIED TO ADD YOURSELF!#")
                 self.conn.send(self.data_string)
+            if user_name not in test1:
+                print("User does not exist!")
+                self.data_string = pickle.dumps("USER DOES NOT EXIST!#")
+                self.conn.send(self.data_string)
+                
             if user_name in test1:
                 #print("test1: {}".format(test1))
                 #print("user_name!: {}".format(user_name))
-                with open('{}.csv'.format(LoginName), 'a', newline='') as f:
-                    print("Created {}.csv!".format(LoginName))
-                with open('{}.csv'.format(LoginName), 'r') as f:
+                with open('UserData/{}.csv'.format(LoginName), 'r') as f:
                     csv_reader = csv.reader(f, delimiter=',')
                     for line2 in csv_reader:
                         cunt2 = line2[0]
                         test2.append(cunt2)
                         #print("test2: {}".format(test2))
                 if user_name not in test2: 
-                    with open('{}.csv'.format(LoginName), 'a', newline='') as f:
+                    with open('UserData/{}.csv'.format(LoginName), 'a', newline='') as f:
                         print("Adding to friendlist!")
                         self.data_string = pickle.dumps("YES ADDED!#{}".format(user_name))
                         self.conn.send(self.data_string)
@@ -138,13 +144,6 @@ class VerifyThread(threading.Thread):
                     print("ALREADY IN FRIENDLIST!")
                     self.data_string = pickle.dumps("ALREADY IN FRIENDLIST!#")
                     self.conn.send(self.data_string)
-                #self.conn.close()    
-                #if user_name not in test2:
-                #    print("NO ADDED!")
-                #    test1.clear()
-                #    self.data_string = pickle.dumps("NO ADDED!")
-                #    self.conn.send(self.data_string)
-                #    #self.conn.close()
 
     def Check_User_Login(self):
         test1 = []
@@ -210,16 +209,43 @@ class VerifyThread(threading.Thread):
                 with open('Users.csv', 'a', newline='') as f:
                     csv_writer = csv.writer(f)
                     csv_writer.writerows(rows)
+                with open('UserData/{}.csv'.format(self.Data_User), 'w', newline='') as f:
+                    print("User: {} created!".format(self.Data_User))
                
     
-    def UserData(self):
-        # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
-        # In server check if the user, trying to be added, is in database - if in database add user to USER_DATA
-        # When logged in, connect to server and load USER_DATA into chat menu window
-        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
-        print()
-                        
+class LoadUsersThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        print("Loading users...\n")
+        while True:
+            self.socketLoad = socket(AF_INET, SOCK_STREAM)
+            self.socketLoad.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.socketLoad.bind((HOST, LOAD_USER_PORT))
+            self.socketLoad.listen()
+            self.conn, addr = self.socketLoad.accept()
+            #with self.conn:
+            print(f"LOAD USERS : Connected by {addr}")
+            # ([stupidusername,"Load_User"])
+            data = self.conn.recv(BUFFER_SIZE)
+            self.data2 = pickle.loads(data)
+            print("Data: {}".format(self.data2))
+            self.Data_User = self.data2[0]
+            self.Data_Check = self.data2[1]
+            print("Data_User: {}".format(self.Data_User)) 
+            print("Data_Check: {}".format(self.Data_Check))
             
+            self.LoadingUsers()
+            
+    def LoadingUsers(self):
+        UserFriendList = []
+        with open('UserData/{}.csv'.format(self.Data_User), 'r') as f:
+            csv_reader = csv.reader(f, delimiter=',')
+            for line3 in csv_reader:
+                cunt3 = line3[0]
+                UserFriendList.append(cunt3)
+                print("UserFriendList: {}".format(UserFriendList))
+            LoadUsersData = pickle.dumps(UserFriendList)
+            self.conn.send(LoadUsersData)
 
 
 class ClientThread(threading.Thread):
@@ -336,8 +362,11 @@ if __name__=="__main__":
     print("newport: {}".format(newport))
 
     while True:
-        process = Process(target=VerifyThread)
-        process.start()
+        process1 = Process(target=VerifyThread)
+        process1.start()
+        
+        process2 = Process(target=LoadUsersThread)
+        process2.start()
         #ThreadVerify = VerifyThread()
         #ThreadVerify.start()
         
