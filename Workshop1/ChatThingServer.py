@@ -33,6 +33,7 @@ root.geometry("700x550")
 root.title("Awesome Chat Program!")
 
 stupidusername = ""
+userfriend = ""
 UserDataLoaded = []
 
 class Main_View(tk.Tk):
@@ -501,7 +502,8 @@ class Page_Chat(tk.Frame):
                                    command=lambda count=count,name=self.dataLoaded[count]:self.OpenUserChat(name,count))
             name = self.dataLoaded[count]
             print("This is name: {}".format(name))
-            print("Username of friends: {}".format(self.dataLoaded[count]))                         
+            print("Username of friends: {}".format(self.dataLoaded[count]))  
+                                  
             #self.LoadedUserLabel.bind("<Button-1>", lambda e:self.shitmyself())
             tempnameholder.append(self.dataLoaded[count])
             #print("tempnameholder: {}".format(tempnameholder))
@@ -538,6 +540,8 @@ class Page_Chat(tk.Frame):
         #print("self.LoadedUserLabels: {}".format(self.LoadedUserLabels))
         #for i in range(len(self.LoadedUserLabels)):
         #    friendlist = self.dataLoaded[i]
+            global userfriend
+            userfriend = friend
             
             print("\nwhat is friend name: {}".format(friend))
             #print("what is friendlist {}".format(friendlist))
@@ -593,10 +597,11 @@ class SendData():
         self.ds=tcp_socket
         self.uu=user
     def send(self):
+            global userfriend
             send_data = self.input.get()
             print("send data: {}".format(send_data))
             if len(send_data) > 1:
-                chat_data=[self.uu,send_data]
+                chat_data=[self.uu,send_data, userfriend]
                 chat_string = pickle.dumps(chat_data)
                 self.ds.send(chat_string)
                 self.chat.configure(state="normal")
