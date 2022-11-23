@@ -68,3 +68,4 @@ Workshop1/Images
 Workshop1/env
 Workshop1/*.env
 Workshop1/UserData/*.csv
+Workshop1/UserLogs

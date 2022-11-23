@@ -19,6 +19,7 @@ from socket import *
 import threading
 import time
 import pickle
+import os
 
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 1234
@@ -491,7 +492,6 @@ class Page_Chat(tk.Frame):
         print("Users loaded from server: {}".format(self.dataLoaded))
         count = 0
         self.LoadedUserLabels = []
-        tempnameholder = []
         
         
         for x in self.dataLoaded:
@@ -504,26 +504,16 @@ class Page_Chat(tk.Frame):
             name = self.dataLoaded[count]
             print("This is name: {}".format(name))
             print("Username of friends: {}".format(self.dataLoaded[count]))  
-                                  
-            #self.LoadedUserLabel.bind("<Button-1>", lambda e:self.shitmyself())
-            tempnameholder.append(self.dataLoaded[count])
-            #print("tempnameholder: {}".format(tempnameholder))
-            global labelClicked
-            labelClicked = False
-            
-            #self.LoadedUserLabel.bind("<Button-1>", lambda e:[self.callback()])
-            #self.LoadedUserLabel.bind("<Button-1>", lambda count=count,name=self.dataLoaded[count]:self.OpenUserChat(name,count))
-            
             self.LoadedUserLabel.pack(side=tk.TOP,expand=False,pady=3)
-            count += 1
             self.LoadedUserLabels.append(self.LoadedUserLabel)
             
+            os.makedirs("UserLogs/{}".format(stupidusername),exist_ok=True)
+            with open('UserLogs/{}/{}.txt'.format(stupidusername,self.dataLoaded[count]), 'a', newline='') as f:
+                    print("User log: {} created!".format(self.dataLoaded[count]))
+            count += 1
+                    
             
-        #print("LoadedUserLabels: {}".format(self.LoadedUserLabels))
-        
-        #for x in self.LoadedUserLabels:
-        #    x.bind("<Button-1>", lambda e:[self.callback(e)])
-        #    print("this is x: {}".format(x))
+                    
         
     def removeUsers(self):
         for widget in self.frame6.winfo_children():
@@ -565,6 +555,13 @@ class Page_Chat(tk.Frame):
             self.chat_box = tk.Text(self.ChatTestFrame, height=250)
             self.chat_box.configure(state="disabled")
             self.chat_box.pack(fill='both',expand=True)
+            
+            logs = PersistentLogs()
+            usertext = logs.ReadLog(userfriend)
+            print("user text: {}".format(usertext))
+            self.chat_box.configure(state="normal")
+            self.chat_box.insert("end",usertext)
+            self.chat_box.configure(state="disabled")
             
             scrollbar = tk.Scrollbar(self.chat_box)
             scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
@@ -612,6 +609,8 @@ class SendData():
                 self.chat.insert("end","\nYOU: {}".format(send_data))
                 self.chat.configure(state="disabled")
                 self.chat.see("end")
+                logs = PersistentLogs()
+                logs.WriteToLog(userfriend,"YOU: {}".format(send_data))
     def exit(self):
             chat_data=[self.uu, "EEXIT"]
             chat_string = pickle.dumps(chat_data)
@@ -634,21 +633,46 @@ class ReceiveData(threading.Thread):
                 recv_string = self.ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
                 if (recv_data[0] != "Server"):
-                    self.chat.configure(state="normal")
-                    self.chat.insert("end","\n{}: {}".format(recv_data[0],recv_data[1]))
-                    self.chat.configure(state="disabled")
-                    self.chat.see("end")
+                    if userfriend == recv_data[0]:
+                        self.chat.configure(state="normal")
+                        msg = "{}: {}".format(recv_data[0],recv_data[1])
+                        self.chat.insert("end","\n"+msg)
+                        self.chat.configure(state="disabled")
+                        self.chat.see("end")
+                        logs = PersistentLogs()
+                        logs.WriteToLog(userfriend,msg)
+                        print("Received!!!!!!!")
                 else:
                     print(recv_data[1])
                     
     def set(self,chat_box):
         self.chat = chat_box   
  
-
+class PersistentLogs():
+    def __init__(self):
+        print()
+        
+    def WriteToLog(self,user,msg):
+        with open('UserLogs/{}/{}.txt'.format(stupidusername,user), 'a', newline='') as f:
+        #with open('UserLogs/test.txt', 'a', newline='') as f:
+            f.write(msg+"\n")
+        
+    def ReadLog(self,user):
+        with open('UserLogs/{}/{}.txt'.format(stupidusername,user), 'r', newline='') as f:
+        #with open('UserLogs/test.txt', 'r', newline='') as f:
+            text = f.read()
+            print(text)
+            return text
+        
+        
+        
+        
 if __name__=="__main__":
-    #myapp = Main_View()
-    #myapp.mainloop()
-
+   
+    #test = PersistentLogs()
+    #test.WriteToLog(test,"LORT")
+    #test.ReadLog(test)
+    
     root = Main_View()
     root.add_page("Page_Login",Page_Login)
     #root.add_page("Page_UserRegister",Page_UserRegister)
