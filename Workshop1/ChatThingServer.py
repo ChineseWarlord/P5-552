@@ -59,9 +59,9 @@ class Main_View(tk.Tk):
         #self.show_frame(Page_Chat)
         self.frames = {}
         
-    def add_page(self,Name, Page, thread1=0):
+    def add_page(self,Name, Page, thread1=0, thread2=0):
         if Name == "Page_Chat":
-            self.frames[Name] = Page(parent=self.container,controller=self, thread=thread1)    
+            self.frames[Name] = Page(parent=self.container,controller=self, thread1=thread1,thread2=thread2)    
             self.frames[Name].grid(row=0, column=0, sticky="nsew")
         else:    
             self.frames[Name] = Page(parent=self.container,controller=self)    
@@ -200,7 +200,7 @@ class Page_Login(tk.Frame):
                 self.thread1 = SendData(UserChatSocket2,stupidusername)
                 self.thread2 = ReceiveData(UserChatSocket2, self.event)
                 self.thread2.start()
-                root.add_page("Page_Chat",Page_Chat, self.thread1)
+                root.add_page("Page_Chat",Page_Chat, self.thread1, self.thread2)
             else:
                 print("Reply from server: server is full. Retry later.")
         
@@ -304,11 +304,12 @@ class Page_UserRegister(tk.Frame):
             print("Register socket status: {}".format(self.se))            
 
 class Page_Chat(tk.Frame):
-    def __init__(self,parent,controller, thread):
+    def __init__(self,parent,controller, thread1,thread2):
         tk.Frame.__init__(self,parent)
         
         self.controller = controller
-        self.thread1 = thread
+        self.thread1 = thread1
+        self.thread2 = thread2
         print("PAGE_CHAT Am I printing this? 1")
         
         
@@ -516,6 +517,8 @@ class Page_Chat(tk.Frame):
             self.LoadedUserLabel.pack(side=tk.TOP,expand=False,pady=3)
             count += 1
             self.LoadedUserLabels.append(self.LoadedUserLabel)
+            
+            
         #print("LoadedUserLabels: {}".format(self.LoadedUserLabels))
         
         #for x in self.LoadedUserLabels:
@@ -575,6 +578,7 @@ class Page_Chat(tk.Frame):
             self.input_field.pack(side=tk.TOP,pady=1)
             
             self.thread1.set(self.chat_box,self.input_field)
+            self.thread2.set(self.chat_box)
             
             self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
             self.button['command'] = self.send_message_button

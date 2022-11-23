@@ -30,6 +30,7 @@ port = 2000
 listofports = []
 allUsers = []
 LoginName = ""
+
 UserSockets = []
 
 
@@ -294,10 +295,14 @@ class ClientThread(threading.Thread):
             ds, userAddress = dedicatedserver.accept()
             self.porthandles.append(ds)
             test_string = ""
+            UserSockets.append([ds,uusername])
+            print("UserSockets: {}".format(UserSockets))
             while True:
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
                 # msg structure: [userlogin, msg, toUser]
+                
+                
                 print("What is recv_data: {}".format(recv_data))
                 #test_string = recv_data[1]
                 #print("What is test_string: {}".format(test_string))
@@ -322,11 +327,11 @@ class ClientThread(threading.Thread):
                     print('    username: {}'.format(data_list[1]))
                     break
                 else:
-                    for x in self.porthandles:
-                        if x != ds:
+                    for x in UserSockets:
+                        if x[1] == recv_data[2]:
                             print("what is x? {}".format(x))
-                            
-                            x.send(recv_string)
+                            x[0].send(recv_string)
+                            print("Sender til {}".format(recv_data[2]))
                         else:
                             print("Message received from {}: {}".format(recv_data[0],recv_data[1]))
         else:
