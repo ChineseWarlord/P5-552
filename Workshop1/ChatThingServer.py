@@ -58,9 +58,13 @@ class Main_View(tk.Tk):
         #self.show_frame(Page_Chat)
         self.frames = {}
         
-    def add_page(self,Name, Page):
-        self.frames[Name] = Page(parent=self.container,controller=self)    
-        self.frames[Name].grid(row=0, column=0, sticky="nsew")
+    def add_page(self,Name, Page, thread1=0):
+        if Name == "Page_Chat":
+            self.frames[Name] = Page(parent=self.container,controller=self, thread=thread1)    
+            self.frames[Name].grid(row=0, column=0, sticky="nsew")
+        else:    
+            self.frames[Name] = Page(parent=self.container,controller=self)    
+            self.frames[Name].grid(row=0, column=0, sticky="nsew")
         
     def show_frame(self, Page): 
         frame = self.frames[Page]
@@ -133,7 +137,7 @@ class Page_Login(tk.Frame):
     def LoadUsers(self):
         while True:
             print("Data: {} {}".format(self.data[1],self.data[2]))
-            self.data_string = pickle.dumps([self.data[1], self.data[2]])
+            self.data_string = pickle.dumps([self.data[1],self.data[2]])
             self.se.send(self.data_string)
             data_Load = self.se.recv(BUFFER_SIZE)
             data_Load = pickle.loads(data_Load)
@@ -144,10 +148,7 @@ class Page_Login(tk.Frame):
             
             with open('UsersDataLoaded.csv', 'a', newline='') as f:
                     csv_writer = csv.writer(f)
-                    csv_writer.writerows(data_Load)
-                    
-
-            
+                    csv_writer.writerows(data_Load)    
                
     def log_in(self):
         print("USER: "+self.UsernameLogin.get())
@@ -176,17 +177,14 @@ class Page_Login(tk.Frame):
             stupidusername = self.data[1]
             print("From Server stupidusername: {}".format(stupidusername))
             self.clear_entry()
-            root.add_page("Page_Chat",Page_Chat)
             
             self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
             self.UserChatSocket1.connect((SERVER_IP, SERVER_PORT))
             connect_list=["CONNECT",stupidusername]
             print("connect_list: ",connect_list)
-            
             data_string = pickle.dumps(connect_list)
-            #self.UserChatSocket1.send(data_string)
-            self.Usersocket.send(data_string)
-            data = self.Usersocket.recv(BUFFER_SIZE)
+            self.UserChatSocket1.send(data_string)
+            data = self.UserChatSocket1.recv(BUFFER_SIZE)
             data_list = pickle.loads(data)
             print("From server data: {}".format(data_list))
             print("From server   OK: {}".format(data_list[0]))
@@ -198,13 +196,12 @@ class Page_Login(tk.Frame):
                 UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
                 UserChatSocket2.connect((SERVER_IP, NEW_PORT))
                 self.event = threading.Event()
-                self.thread1 = SendData(UserChatSocket2,stupidusername, friend)
-                self.thread2 = ReceiveData(UserChatSocket2, self.chat_box, self.event)
+                self.thread1 = SendData(UserChatSocket2,stupidusername)
+                self.thread2 = ReceiveData(UserChatSocket2, self.event)
                 self.thread2.start()
+                root.add_page("Page_Chat",Page_Chat, self.thread1)
             else:
                 print("Reply from server: server is full. Retry later.")
-        
-            self.input_field.bind("<Return>", self.send_message_enter)
         
             
             #print("Login socket status: {}".format(self.se))
@@ -306,11 +303,11 @@ class Page_UserRegister(tk.Frame):
             print("Register socket status: {}".format(self.se))            
 
 class Page_Chat(tk.Frame):
-    def __init__(self,parent,controller, socket):
+    def __init__(self,parent,controller, thread):
         tk.Frame.__init__(self,parent)
         
         self.controller = controller
-        self.Usersocket = socket
+        self.thread1 = thread
         print("PAGE_CHAT Am I printing this? 1")
         
         
@@ -573,6 +570,7 @@ class Page_Chat(tk.Frame):
             self.input_field = tk.Entry(self.ChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
             self.input_field.pack(side=tk.TOP,pady=1)
             
+            self.thread1.set(self.chat_box,self.input_field)
             
             self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
             self.button['command'] = self.send_message_button
@@ -591,16 +589,14 @@ class Page_Chat(tk.Frame):
         return "break"
     
 class SendData():
-    def __init__(self,tcp_socket, user, friend):
+    def __init__(self,tcp_socket, user):
         self.ds=tcp_socket
         self.uu=user
-        self.friend = friend
-        print("Chatting with {}".format(self.friend))
     def send(self):
             send_data = self.input.get()
             print("send data: {}".format(send_data))
             if len(send_data) > 1:
-                chat_data=[self.uu,send_data, self.friend]
+                chat_data=[self.uu,send_data]
                 chat_string = pickle.dumps(chat_data)
                 self.ds.send(chat_string)
                 self.chat.configure(state="normal")
@@ -617,10 +613,9 @@ class SendData():
         self.input = input
            
 class ReceiveData(threading.Thread):
-    def __init__(self,tcp_socket, chat_box, event):
+    def __init__(self,tcp_socket, event):
         threading.Thread.__init__(self)
         self.ds=tcp_socket
-        self.chat = chat_box
         self.event = event
     def run(self):
         self.ds.setblocking(0)
