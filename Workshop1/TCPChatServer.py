@@ -10,62 +10,28 @@ LOAD_USER_PORT = 1000
 BASE_PORT = 1234    # Arbitrary non-privileged port
 PP = 65432  # Port to listen on (non-privileged ports are > 1023)
 
-global count
-global CONN_COUNTER1
-global CONN_COUNTER2
-global CONN_COUNTER3
-global CONN_COUNTER4
-global CONN_COUNTER5
-
-count = 0
-CONN_COUNTER1 = 0    # Counter for connections
-CONN_COUNTER2 = 0    # Counter for connections
-CONN_COUNTER3 = 0    # Counter for connections
-CONN_COUNTER4 = 0    # Counter for connections
-CONN_COUNTER5 = 0    # Counter for connections
-
 BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
 MAX_USERS = 3
+CONN_COUNTER = 0    # Counter for connections
+MAX_USERS = 200
+USERNAMES_LIST = []
+ID_LIST = []
+PORT_IDS = []
+PORT_HANDLES = []
 
-USERNAMES_LIST1 = []
-USERNAMES_LIST2 = []
-USERNAMES_LIST3 = []
-USERNAMES_LIST4 = []
-USERNAMES_LIST5 = []
-
-ID_LIST1 = []
-ID_LIST2 = []
-ID_LIST3 = []
-ID_LIST4 = []
-ID_LIST5 = []
-
-PORT_IDS1= []
-PORT_SERVER1 = 2000
-PORT_IDS2 = []
-PORT_SERVER2 = 3000
-PORT_IDS3 = []
-PORT_SERVER3 = 4000
-PORT_IDS4 = []
-PORT_SERVER4 = 5000
-PORT_IDS5 = []
-PORT_SERVER5 = 6000
-
-PORT_HANDLES1 = []
-PORT_HANDLES2 = []
-PORT_HANDLES3 = []
-PORT_HANDLES4 = []
-PORT_HANDLES5 = []
-
+global count
 global port
-port = 2000
-
-LoginName = ""
-
-allUsers = []
 global listofports
+global allUsers
+global LoginName
+global UserSockets
+count = 0
+port = 2000
 listofports = []
-
+allUsers = []
+LoginName = ""
 UserSockets = []
+
 
 class VerifyThread(threading.Thread):
     def __init__(self):
@@ -189,7 +155,7 @@ class VerifyThread(threading.Thread):
             print("OK LOGIN!")
             self.data_string = pickle.dumps("YES LOGIN!#{}#{}".format(self.Data_User,self.Data_Pass))
             self.conn.send(self.data_string)
-            #self.conn.close()    
+            self.conn.close()    
         if user_data not in test1:
             print("NO LOGIN!")
             test1.clear()
@@ -285,6 +251,14 @@ class ClientThread(threading.Thread):
         self.userids = ii
         self.portids = pi
         self.porthandles = hi
+        print("\n\n=======================")
+        print("self.csocket: {}".format(self.csocket))
+        print("self.counter: {}".format(self.counter))
+        print("self.usernames: {}".format(self.usernames))
+        print("self.userids: {}".format(self.userids))
+        print("self.portids: {}".format(self.portids))
+        print("self.porthandles: {}".format(self.porthandles))
+        print("=======================")
     def run(self):
         r = self.csocket.recv(BUFFER_SIZE)
         print("WHat is r: {}".format(r))
@@ -292,15 +266,19 @@ class ClientThread(threading.Thread):
         if len(self.usernames)<MAX_USERS:
             indid=self.counter
             self.userids.append(indid)
+            print("self.userids.append(indid): {}".format(self.userids))
             uusername=data_list[1]
             self.usernames.append(uusername)
+            print("self.username list: {}".format(self.usernames))
+            print("========================================================================")
             print('*** Connection {} accepted. Status: active/maximum users: {}/{}'.format(self.counter,len(self.usernames),MAX_USERS))
             print('    from {}'.format(clientAddress))
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
+            print("========================================================================")
             onlineusers=len(self.userids)
             NEW_PORT=BASE_PORT+self.counter
-            print(NEW_PORT)
+            print("this is NEW_PORT: {}".format(NEW_PORT))
             self.portids.append(NEW_PORT)
             dedicatedserver = socket(AF_INET, SOCK_STREAM)
             dedicatedserver.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -364,12 +342,10 @@ class ClientThread(threading.Thread):
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
-print("Chat Server started.")
-print("Waiting for chat client connections...")
-
-
 
 if __name__=="__main__":
+    print("Chat Server started.")
+    print("Waiting for chat client connections...")
     #print("Chat Server started.")
     #print("Waiting for chat client connections...")
     
@@ -383,6 +359,13 @@ if __name__=="__main__":
         clientsock, clientAddress = server.accept()
         CONN_COUNTER=CONN_COUNTER+1
         newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
+        print("\n\n=======================================")
+        print("This is client socket: {}\nThis is client address: {}".format(clientsock,clientAddress))
+        print("This is USERNAME_LIST: {}".format(USERNAMES_LIST))
+        print("This is ID_LIST: {}".format(ID_LIST))
+        print("This is PORT_IDS: {}".format(PORT_IDS))
+        print("This is PORT_HANDLES: {}".format(PORT_HANDLES))
+        print("=======================================\n\n")
         newthread.start()
 
     """
