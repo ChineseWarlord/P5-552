@@ -117,9 +117,13 @@ class SendData():
         self.input = input_field
         self.chat = chat_box
     def send(self):
-            send_data = self.input.get("1.0", "end")
+            test_string = input()
+            #send_data = self.input.get("1.0", "end")
+            send_data = self.input.get(test_string)
+            print("What is send_data: {}".format(send_data))
+            #test_string = ""
             if len(send_data) > 1:
-                chat_data=[self.uu,send_data]
+                chat_data=[self.uu, test_string]
                 chat_string = pickle.dumps(chat_data)
                 self.ds.send(chat_string)
                 self.chat.configure(state="normal")

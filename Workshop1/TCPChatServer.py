@@ -65,6 +65,8 @@ allUsers = []
 global listofports
 listofports = []
 
+UserSockets = []
+
 class VerifyThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
@@ -162,7 +164,7 @@ class VerifyThread(threading.Thread):
                         global port
                         print("username {} : port {}".format(user_name, port))
                         csv_writer = csv.writer(f)
-                        csv_writer.writerow([user_name])
+                        csv_writer.writerow([user_name,port])
                         port += 1000
                 if user_name in test2:
                     print("ALREADY IN FRIENDLIST!")
@@ -275,7 +277,7 @@ class LoadUsersThread(threading.Thread):
 
 
 class ClientThread(threading.Thread):
-    def __init__(self,clientAddress,clientsocket,cc,uu,ii,pi,hi,pp):
+    def __init__(self,clientAddress,clientsocket,cc,uu,ii,pi,hi):
         threading.Thread.__init__(self)
         self.csocket = clientsocket
         self.counter = cc
@@ -283,10 +285,9 @@ class ClientThread(threading.Thread):
         self.userids = ii
         self.portids = pi
         self.porthandles = hi
-        self.clientAddress = clientAddress
-        self.portserver = pp
     def run(self):
         r = self.csocket.recv(BUFFER_SIZE)
+        print("WHat is r: {}".format(r))
         data_list = pickle.loads(r)
         if len(self.usernames)<MAX_USERS:
             indid=self.counter
@@ -294,27 +295,40 @@ class ClientThread(threading.Thread):
             uusername=data_list[1]
             self.usernames.append(uusername)
             print('*** Connection {} accepted. Status: active/maximum users: {}/{}'.format(self.counter,len(self.usernames),MAX_USERS))
-            print('    from {}'.format(self.clientAddress))
+            print('    from {}'.format(clientAddress))
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
             onlineusers=len(self.userids)
-            NEW_PORT=self.portserver+self.counter
+            NEW_PORT=BASE_PORT+self.counter
             print(NEW_PORT)
             self.portids.append(NEW_PORT)
             dedicatedserver = socket(AF_INET, SOCK_STREAM)
             dedicatedserver.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
             dedicatedserver.bind((HOST, NEW_PORT))
             connect_ok_list=["OK",indid,onlineusers,NEW_PORT]
+            print("what is connect_ok_list: {}" .format(connect_ok_list))
             data_string = pickle.dumps(connect_ok_list)
             self.csocket.send(data_string)
+            print("WHat am i sending? {}".format(data_string))
             self.csocket.close()
             print('    transferred to: {}'.format(NEW_PORT))
             dedicatedserver.listen(1)
             ds, userAddress = dedicatedserver.accept()
             self.porthandles.append(ds)
+            test_string = ""
             while True:
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
+                # msg structure: [userlogin, msg, toUser]
+                print("What is recv_data: {}".format(recv_data))
+                #test_string = recv_data[1]
+                #print("What is test_string: {}".format(test_string))
+                X = ''.join(recv_data[1])
+                print("What is X: {}".format(X))
+                # Data structure: [username, msg, SendToUser]
+                if X == 'cunt':
+                    print("DIN STORE CUNT!")
+                    
                 if recv_data[0] == "EEXIT":
                     self.usernames.remove(uusername)
                     print(self.usernames)
@@ -332,6 +346,8 @@ class ClientThread(threading.Thread):
                 else:
                     for x in self.porthandles:
                         if x != ds:
+                            print("what is x? {}".format(x))
+                            
                             x.send(recv_string)
                         else:
                             print("Message received from {}: {}".format(recv_data[0],recv_data[1]))
@@ -341,110 +357,57 @@ class ClientThread(threading.Thread):
             self.csocket.send(data_string)
             self.csocket.close()
             print('*** Connection {} refused. Maximum numbers of users reached.'.format(self.counter))
-            print('    from {}'.format(self.clientAddress))
+            print('    from {}'.format(clientAddress))
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
-global CONN_COUNTER
-global ClientThreadx
-CONN_COUNTER = 0    # Counter for connections
-BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
-MAX_USERS = 20
-USERNAMES_LIST = []
-ID_LIST = []
-PORT_IDS = []
-PORT_HANDLES = []
 
-def createServers():
-    global port
-    global CONN_COUNTER
-    global ClientThreadx
-    serversock = socket(AF_INET, SOCK_STREAM)
-    serversock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    serversock.bind((HOST, port))
-    serversock.listen(1)
-    clientsock, clientAddress = serversock.accept()
-    CONN_COUNTER=CONN_COUNTER+1
-    ClientThreadx = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST,   ID_LIST, 
-                                     PORT_IDS, PORT_HANDLES, port)
-    ClientThreadx.start()
-    port += 1000 
-    global listofports
-    listofports.append(port)
-    print("listofports {}".format(listofports))
-    
-def server1():
-    server1sock = socket(AF_INET, SOCK_STREAM)
-    server1sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    server1sock.bind((HOST, PORT_SERVER1))
-    #print("newport 1: {}".format(newport))
-    server1sock.listen(1)
-    clientsock1, clientAddress1 = server1sock.accept()
-    global CONN_COUNTER1
-    CONN_COUNTER1=CONN_COUNTER1+1
-    ClientThread1 = ClientThread(clientAddress1, clientsock1, CONN_COUNTER1, USERNAMES_LIST1,   ID_LIST1, 
-                                     PORT_IDS1, PORT_HANDLES1, PORT_SERVER1)
-    ClientThread1.start() 
-def server2():
-    server2sock = socket(AF_INET, SOCK_STREAM)
-    server2sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    server2sock.bind((HOST, PORT_SERVER2))
-    #print("newport 2: {}".format(newport))
-    server2sock.listen(1)
-    clientsock2, clientAddress2 = server2sock.accept()
-    global CONN_COUNTER2
-    CONN_COUNTER2=CONN_COUNTER2+1
-    ClientThread2 = ClientThread(clientAddress2, clientsock2, CONN_COUNTER2, USERNAMES_LIST2, ID_LIST2, 
-                                     PORT_IDS2, PORT_HANDLES2, PORT_SERVER2)
-    ClientThread2.start()
-def server3():
-    server3sock = socket(AF_INET, SOCK_STREAM)
-    server3sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    server3sock.bind((HOST, PORT_SERVER3))
-    #print("newport 3: {}".format(newport))
-    server3sock.listen(1)
-    clientsock3, clientAddress3 = server3sock.accept()
-    global CONN_COUNTER3
-    CONN_COUNTER3=CONN_COUNTER3+1
-    ClientThread3 = ClientThread(clientAddress3, clientsock3, CONN_COUNTER3, USERNAMES_LIST3, ID_LIST3, 
-                                     PORT_IDS3, PORT_HANDLES3, PORT_SERVER3)
-    ClientThread3.start()
-def server4():
-    server4sock = socket(AF_INET, SOCK_STREAM)
-    server4sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    server4sock.bind((HOST, PORT_SERVER4))
-    #print("newport 4: {}".format(newport))
-    server4sock.listen(1)
-    clientsock4, clientAddress4 = server4sock.accept()
-    global CONN_COUNTER4
-    CONN_COUNTER4=CONN_COUNTER4+1
-    ClientThread4 = ClientThread(clientAddress4, clientsock4, CONN_COUNTER4, USERNAMES_LIST4, ID_LIST4, 
-                                     PORT_IDS4, PORT_HANDLES4,PORT_SERVER4)
-    ClientThread4.start()    
-def server5():
-    server5sock = socket(AF_INET, SOCK_STREAM)
-    server5sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-    server5sock.bind((HOST, PORT_SERVER5))
-    #print("newport 5: {}".format(newport))
-    server5sock.listen(1)
-    clientsock5, clientAddress5 = server5sock.accept()
-    global CONN_COUNTER5
-    CONN_COUNTER5=CONN_COUNTER5+1
-    ClientThread5 = ClientThread(clientAddress5, clientsock5, CONN_COUNTER5, USERNAMES_LIST5, ID_LIST5, 
-                                     PORT_IDS5, PORT_HANDLES5,PORT_SERVER5)
-    ClientThread5.start()
+server = socket(AF_INET, SOCK_STREAM)
+server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+server.bind((HOST, BASE_PORT))
+print("Chat Server started.")
+print("Waiting for chat client connections...")
+
+
 
 if __name__=="__main__":
-    print("Chat Server started.")
-    print("Waiting for chat client connections...")
+    #print("Chat Server started.")
+    #print("Waiting for chat client connections...")
     
     process1 = Process(target=VerifyThread)
     process1.start()
     process2 = Process(target=LoadUsersThread)
     process2.start()
-    count = 0
+    
     while True:
-        ThreadServers1 = Thread(target=createServers)
-        ThreadServers1.start()
+        server.listen(1)
+        clientsock, clientAddress = server.accept()
+        CONN_COUNTER=CONN_COUNTER+1
+        newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
+        newthread.start()
+
+    """
+    count = 0
+    
+    testQ = []
+    #while True:
+    with open('Users.csv', 'r') as f:
+            csv_reader = csv.reader(f, delimiter=',')
+            next(csv_reader)
+            for line in csv_reader:
+                    cunt = line[0]+line[1]
+                    testQ.append(cunt)
+                    print("testQ: {}".format(len(testQ)))
+            testQ.clear()
+    while True:
+        ThreadServer1 = Thread(target=server1)
+        ThreadServer1.start()
+        ThreadServer2 = Thread(target=server2)
+        ThreadServer2.start()        
+    
+    """
+    #for i in range(len(testQ)):
+            #ThreadServers1 = Thread(target=createServers)
+            #ThreadServers1.start()
         #ThreadServer1 = Thread(target=server1)
         #ThreadServer1.start()
         #ThreadServer2 = Thread(target=server2)
