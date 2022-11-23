@@ -327,7 +327,7 @@ class ClientThread(threading.Thread):
                 print("What is X: {}".format(X))
                 # Data structure: [username, msg, SendToUser]
                 if X == 'cunt':
-                    print("DIN STORE CUNT!")
+                    print("DIN STORE CUNT!") 
                     
                 if recv_data[0] == "EEXIT":
                     self.usernames.remove(uusername)

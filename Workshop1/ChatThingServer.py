@@ -612,6 +612,7 @@ class Page_Chat(tk.Frame):
         
             self.input_field.bind("<Return>", self.send_message_enter)
         
+        
         #print("global click: {}".format(labelClicked))
         
         
