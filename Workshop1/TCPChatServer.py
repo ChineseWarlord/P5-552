@@ -4,11 +4,13 @@ import threading
 from threading import Thread
 from socket import *
 from multiprocessing import Process
+import os
 
 HOST = ''           # Symbolic name meaning all available interfaces
 LOAD_USER_PORT = 1000
 BASE_PORT = 1234    # Arbitrary non-privileged port
 PP = 65432  # Port to listen on (non-privileged ports are > 1023)
+LOGS_PORT = 65433
 
 BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
 MAX_USERS = 3
@@ -24,13 +26,14 @@ global port
 global listofports
 global allUsers
 global LoginName
+global UserLog
 global UserSockets
 count = 0
 port = 2000
 listofports = []
 allUsers = []
 LoginName = ""
-
+UserLog = ""
 UserSockets = []
 
 
@@ -49,7 +52,11 @@ class VerifyThread(threading.Thread):
             self.s.listen()
             self.conn, addr = self.s.accept()
             #with self.conn:
-            print(f"Connected by {addr}")
+            print("Connected to verify thread!")
+            print("socket: {}".format(self.conn))
+            print(f"IP address: {addr}")
+            
+            
             data = self.conn.recv(BUFFER_SIZE)
             self.data2 = pickle.loads(data)
             print("Data: {}".format(self.data2))
@@ -59,7 +66,7 @@ class VerifyThread(threading.Thread):
             self.Data_UserPass = self.data2[0]+self.data2[1]
             print("Data_User: {}".format(self.Data_User))  
             print("Data_Pass: {}".format(self.Data_Pass))
-            print("Data_Check: {}".format(self.Data_Check)) 
+            print("Data_Check: {}".format(self.Data_Check))
             print("Data_UserPass: {}".format(self.Data_UserPass)) 
             #text = "OK - Cancer"
             #self.data_string = pickle.dumps(text)
@@ -73,6 +80,8 @@ class VerifyThread(threading.Thread):
                     self.Check_User_Login()
                     self.conn.close()
             if self.Data_Check == "UserAdd":
+                    global LoginName
+                    LoginName = self.Data_Pass
                     self.Add_User()
                     self.conn.close()
 
@@ -86,9 +95,9 @@ class VerifyThread(threading.Thread):
         test1 = []
         test2 = []
         print("User added: ", user_name)
-        with open('Users.csv', 'r') as f:
+        with open('UserData/Users.csv', 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
-            next(csv_reader)
+            #next(csv_reader)
             for line in csv_reader:
                 cunt = line[0]
                 #print("line[0] = {} \nline[1] = {}".format(line[0],line[1]))
@@ -116,23 +125,22 @@ class VerifyThread(threading.Thread):
             if user_name in test1:
                 #print("test1: {}".format(test1))
                 #print("user_name!: {}".format(user_name))
-                with open('UserData/{}.csv'.format(LoginName), 'r') as f:
+                with open('UserFriends/{}.csv'.format(LoginName), 'r') as f:
                     csv_reader = csv.reader(f, delimiter=',')
                     for line2 in csv_reader:
                         cunt2 = line2[0]
                         test2.append(cunt2)
                         #print("test2: {}".format(test2))
                 if user_name not in test2: 
-                    with open('UserData/{}.csv'.format(LoginName), 'a', newline='') as f:
+                    with open('UserFriends/{}.csv'.format(LoginName), 'a', newline='') as f:
                         print("Adding to friendlist!")
                         self.data_string = pickle.dumps("YES ADDED!#{}".format(user_name))
                         self.conn.send(self.data_string)
-                        
-                        global port
                         print("username {} : port {}".format(user_name, port))
                         csv_writer = csv.writer(f)
-                        csv_writer.writerow([user_name,port])
-                        port += 1000
+                        csv_writer.writerow([user_name])
+                        createUserLog = open('UserLogs/{}/{}.txt'.format(LoginName,user_name), 'a')
+                        createUserLog.close()
                 if user_name in test2:
                     print("ALREADY IN FRIENDLIST!")
                     self.data_string = pickle.dumps("ALREADY IN FRIENDLIST!#")
@@ -144,10 +152,13 @@ class VerifyThread(threading.Thread):
         global LoginName
         LoginName = self.Data_User
         print("LoginName: {}".format(LoginName))
-            
-        with open('Users.csv', 'r') as f:
+        
+        os.makedirs("UserData",exist_ok=True)   
+        createusers = open('UserData/Users.csv', 'a')
+        createusers.close()
+        with open('UserData/Users.csv', 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
-            next(csv_reader)
+            #next(csv_reader)
             for line in csv_reader:
                 cunt = line[0]+line[1]
                 test1.append(cunt)
@@ -156,7 +167,7 @@ class VerifyThread(threading.Thread):
             print("OK LOGIN!")
             self.data_string = pickle.dumps("YES LOGIN!#{}#{}".format(self.Data_User,self.Data_Pass))
             self.conn.send(self.data_string)
-            self.conn.close()    
+            #self.conn.close()    
         if user_data not in test1:
             print("NO LOGIN!")
             test1.clear()
@@ -171,8 +182,10 @@ class VerifyThread(threading.Thread):
         #print("test1: {}".format(test1))
         user_data = self.Data_UserPass
         #print("user_data: {}".format(user_data))
-            
-        with open('Users.csv', 'r') as f:
+        os.makedirs("UserData",exist_ok=True) 
+        os.makedirs("UserLogs/{}".format(self.Data_User),exist_ok=True)
+        open("UserData/Users.csv", "a")
+        with open('UserData/Users.csv', 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
             for line in csv_reader:
                 #print("line: {}".format(line))
@@ -198,10 +211,12 @@ class VerifyThread(threading.Thread):
                 self.data_string = pickle.dumps("YES OK!")
                 self.conn.send(self.data_string) 
                 #self.conn.close()
-                with open('Users.csv', 'a', newline='') as f:
+                
+                with open('UserData/Users.csv', 'a', newline='') as f:
                     csv_writer = csv.writer(f)
                     csv_writer.writerows(rows)
-                with open('UserData/{}.csv'.format(self.Data_User), 'w', newline='') as f:
+                os.makedirs("UserFriends",exist_ok=True)
+                with open('UserFriends/{}.csv'.format(self.Data_User), 'w', newline='') as f:
                     print("User: {} created!".format(self.Data_User))
                     global allUsers
                     allUsers.append(self.Data_User)
@@ -233,7 +248,7 @@ class LoadUsersThread(threading.Thread):
             
     def LoadingUsers(self):
         UserFriendList = []
-        with open('UserData/{}.csv'.format(self.Data_User), 'r') as f:
+        with open('UserFriends/{}.csv'.format(self.Data_User), 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
             for line3 in csv_reader:
                 cunt3 = line3[0]
@@ -297,22 +312,19 @@ class ClientThread(threading.Thread):
             test_string = ""
             UserSockets.append([ds,uusername])
             print("UserSockets: {}".format(UserSockets))
+            logs = PersistentLogs()
+            
             while True:
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
+                
                 # msg structure: [userlogin, msg, toUser]
-                
-                
                 print("What is recv_data: {}".format(recv_data))
-                #test_string = recv_data[1]
-                #print("What is test_string: {}".format(test_string))
-                X = ''.join(recv_data[1])
-                print("What is X: {}".format(X))
-                # Data structure: [username, msg, SendToUser]
-                if X == 'cunt':
-                    print("DIN STORE CUNT!") 
-                    
-                if recv_data[0] == "EEXIT":
+                print("What is recv_data[0]: {}".format(recv_data[0]))
+                print("What is recv_data[1]: {}".format(recv_data[1]))
+                print("What is recv_data[2]: {}".format(recv_data[2]))
+              
+                if recv_data[1] == "EEXIT":
                     self.usernames.remove(uusername)
                     print(self.usernames)
                     self.portids.remove(NEW_PORT)
@@ -332,8 +344,11 @@ class ClientThread(threading.Thread):
                             print("what is x? {}".format(x))
                             x[0].send(recv_string)
                             print("Sender til {}".format(recv_data[2]))
+                            logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
                         else:
                             print("Message received from {}: {}".format(recv_data[0],recv_data[1]))
+                            print("User: {} is not currently online".format(recv_data[2]))
+                            logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
@@ -343,7 +358,61 @@ class ClientThread(threading.Thread):
             print('    from {}'.format(clientAddress))
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
-
+            
+class UserLogThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self) 
+        while True:
+            self.logssocket = socket(AF_INET, SOCK_STREAM)
+            self.logssocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.logssocket.bind((HOST, LOGS_PORT))
+            self.logssocket.listen()
+            self.clientsock, clientaddr = self.logssocket.accept()
+            
+            print("Connected to logs thread!")
+            print("socket: {}".format(self.clientsock))
+            print(f"IP address: {clientaddr}")
+            
+            # Data structure: [usernameLogin, usernameFriend]
+            self.data = self.clientsock.recv(BUFFER_SIZE)
+            self.data = pickle.loads(self.data)
+            print("Data: {}".format(self.data))
+            print("Data[0]: {}".format(self.data[0]))
+            print("Data[1]: {}".format(self.data[1]))
+            
+            # Data structure: ReadLog(usernameLogin, usernameFriend)
+            logs = PersistentLogs()
+            Wall_of_Text = logs.ReadLog(self.data[0],self.data[1])
+            Wall_of_Text = pickle.dumps(Wall_of_Text)
+            self.clientsock.send(Wall_of_Text)
+              
+class PersistentLogs():
+    def __init__(self):
+        print("Opening logs...")
+        
+    def WriteToLog(self,user,msg,userfriend):
+        file1 = open('UserLogs/{}/{}.txt'.format(user,userfriend), 'a', newline='')
+        #file1.write("YOU: "+msg+"\n") ORIGINAL
+        file1.write("YOU: "+msg+"\n")
+        
+        file2 = open('UserLogs/{}/{}.txt'.format(userfriend,user), 'a', newline='')
+        #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
+        file2.write("{}: ".format(user)+msg+"\n")
+            
+    def WriteToLogSelf(self,user,msg,userfriend):
+        with open('UserLogs/{}/{}.txt'.format(user,user), 'a', newline='') as f:
+            print("user: {}".format(user))
+            print("msg: {}".format(msg))
+            f.write("{}: ".format(userfriend)+msg+"\n")
+        
+    def ReadLog(self,user,userfriend,):
+        text = ""
+        with open('UserLogs/{}/{}.txt'.format(user,userfriend), 'r', newline='') as f:
+        #with open('UserLogs/test.txt', 'r', newline='') as f:
+            text = f.read()
+            print(text)
+            return text
+        
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
@@ -358,6 +427,8 @@ if __name__=="__main__":
     process1.start()
     process2 = Process(target=LoadUsersThread)
     process2.start()
+    process3 = Process(target=UserLogThread)
+    process3.start()
     
     while True:
         server.listen(1)
@@ -372,109 +443,3 @@ if __name__=="__main__":
         print("This is PORT_HANDLES: {}".format(PORT_HANDLES))
         print("=======================================\n\n")
         newthread.start()
-
-    """
-    count = 0
-    
-    testQ = []
-    #while True:
-    with open('Users.csv', 'r') as f:
-            csv_reader = csv.reader(f, delimiter=',')
-            next(csv_reader)
-            for line in csv_reader:
-                    cunt = line[0]+line[1]
-                    testQ.append(cunt)
-                    print("testQ: {}".format(len(testQ)))
-            testQ.clear()
-    while True:
-        ThreadServer1 = Thread(target=server1)
-        ThreadServer1.start()
-        ThreadServer2 = Thread(target=server2)
-        ThreadServer2.start()        
-    
-    """
-    #for i in range(len(testQ)):
-            #ThreadServers1 = Thread(target=createServers)
-            #ThreadServers1.start()
-        #ThreadServer1 = Thread(target=server1)
-        #ThreadServer1.start()
-        #ThreadServer2 = Thread(target=server2)
-        #ThreadServer2.start()
-        #print()
-        
-         
-    #while True:
-        #process1 = Process(target=VerifyThread)
-        #process1.start()
-        
-        #process2 = Process(target=LoadUsersThread)
-        #process2.start()
-        #ThreadVerify = VerifyThread()
-        #ThreadVerify.start()
-        
-        #ThreadServer1 = Thread(target=server1)
-        #ThreadServer1.start()
-        #ThreadServer2 = Thread(target=server2)
-        #ThreadServer2.start()
-        
-        #server1()
-        #server2()
-        #server3(server3sock)
-        #server4(server4sock)
-        #server5(server5sock)
-        
-        
-        
-        #ThreadServer1 = Thread(target=server1,args=[server1sock])
-        #ThreadServer1.start()
-        
-        #ThreadServer2 = Thread(target=server2,args=[server2sock])
-        #ThreadServer2.start()
-        
-        #ThreadServer3 = Thread(target=server3,args=[server3sock])
-        #ThreadServer3.start()
-        
-        #ThreadServer4 = Thread(target=server4,args=[server4sock])
-        #ThreadServer4.start()
-        
-        #ThreadServer5 = Thread(target=server5,args=[server5sock])
-        #ThreadServer5.start()
-        
-        
-        
-"""
-testcount = 0
-newport = BASE_PORT+testcount
-server1sock = socket(AF_INET, SOCK_STREAM)
-server1sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server1sock.bind((HOST, newport))
-print("newport 1: {}".format(newport))
-
-testcount += 1
-newport = BASE_PORT+testcount
-server2sock = socket(AF_INET, SOCK_STREAM)
-server2sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server2sock.bind((HOST, newport))
-print("newport 2: {}".format(newport))
-
-testcount += 1
-newport = BASE_PORT+testcount
-server3sock = socket(AF_INET, SOCK_STREAM)
-server3sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server3sock.bind((HOST, newport))
-print("newport 3: {}".format(newport))
-
-testcount += 1
-newport = BASE_PORT+testcount
-server4sock = socket(AF_INET, SOCK_STREAM)
-server4sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server4sock.bind((HOST, newport))
-print("newport 4: {}".format(newport))
-
-testcount += 1
-newport = BASE_PORT+testcount
-server5sock = socket(AF_INET, SOCK_STREAM)
-server5sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-server5sock.bind((HOST, newport))
-print("newport 5: {}".format(newport))
-"""

@@ -24,6 +24,7 @@ import os
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 1234
 VERIFY_PORT = 65432
+LOGS_PORT = 65433
 LOAD_USER_PORT = 1000
 BUFFER_SIZE = 1024
 
@@ -60,9 +61,9 @@ class Main_View(tk.Tk):
         #self.show_frame(Page_Chat)
         self.frames = {}
         
-    def add_page(self,Name, Page, thread1=0, thread2=0):
+    def add_page(self,Name, Page, thread1=0, thread2=0, socketlogin=0, socketchat=0):
         if Name == "Page_Chat":
-            self.frames[Name] = Page(parent=self.container,controller=self, thread1=thread1,thread2=thread2)    
+            self.frames[Name] = Page(parent=self.container,controller=self, thread1=thread1,thread2=thread2, socketlogin=socketlogin, socketchat=socketchat)    
             self.frames[Name].grid(row=0, column=0, sticky="nsew")
         else:    
             self.frames[Name] = Page(parent=self.container,controller=self)    
@@ -195,13 +196,13 @@ class Page_Login(tk.Frame):
                 #self.chat_box.configure(state="disabled")
                 NEW_PORT=data_list[3]
                 print(NEW_PORT)
-                UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
-                UserChatSocket2.connect((SERVER_IP, NEW_PORT))
+                self.UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
+                self.UserChatSocket2.connect((SERVER_IP, NEW_PORT))
                 self.event = threading.Event()
-                self.thread1 = SendData(UserChatSocket2,stupidusername)
-                self.thread2 = ReceiveData(UserChatSocket2, self.event)
+                self.thread1 = SendData(self.UserChatSocket2,stupidusername)
+                self.thread2 = ReceiveData(self.UserChatSocket2, self.event)
                 self.thread2.start()
-                root.add_page("Page_Chat",Page_Chat, self.thread1, self.thread2)
+                root.add_page("Page_Chat",Page_Chat, self.thread1, self.thread2, self.UserChatSocket1, self.UserChatSocket2)
             else:
                 print("Reply from server: server is full. Retry later.")
         
@@ -305,12 +306,14 @@ class Page_UserRegister(tk.Frame):
             print("Register socket status: {}".format(self.se))            
 
 class Page_Chat(tk.Frame):
-    def __init__(self,parent,controller, thread1,thread2):
+    def __init__(self,parent,controller, thread1,thread2, socketlogin, socketchat):
         tk.Frame.__init__(self,parent)
         
         self.controller = controller
         self.thread1 = thread1
         self.thread2 = thread2
+        self.socketlogin = socketlogin
+        self.socketchat = socketchat
         print("PAGE_CHAT Am I printing this? 1")
         
         
@@ -379,7 +382,7 @@ class Page_Chat(tk.Frame):
         
         
         # EXIT button
-        self.return_button = tk.Button(self.frame3, text="EXIT",command=lambda : [root.show_frame("Page_Login")], bg="#211A52", fg = "white")
+        self.return_button = tk.Button(self.frame3, text="EXIT",command=lambda : [root.show_frame("Page_Login"),self.socketlogin.close(),self.socketchat.close()], bg="#211A52", fg = "white")
         self.return_button.pack(side=tk.TOP,expand=False)
         #self.return_button.pack(side=tk.TOP)
         
@@ -446,7 +449,7 @@ class Page_Chat(tk.Frame):
         self.se.connect((SERVER_IP, VERIFY_PORT))
         
         TryToAddUser = self.UsernameAdd.get()
-        self.data_string = pickle.dumps([TryToAddUser," ", "UserAdd"])
+        self.data_string = pickle.dumps([TryToAddUser,stupidusername, "UserAdd"])
         self.se.send(self.data_string)
         datax = self.se.recv(BUFFER_SIZE)
         datax = pickle.loads(datax)
@@ -500,16 +503,16 @@ class Page_Chat(tk.Frame):
             self.LoadedUserLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded[count]), 
                                    bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,
                                    anchor="center",
-                                   command=lambda count=count,name=self.dataLoaded[count]:self.OpenUserChat(name,count))
+                                   command=lambda name=self.dataLoaded[count]:self.OpenUserChat(name))
             name = self.dataLoaded[count]
             print("This is name: {}".format(name))
             print("Username of friends: {}".format(self.dataLoaded[count]))  
             self.LoadedUserLabel.pack(side=tk.TOP,expand=False,pady=3)
             self.LoadedUserLabels.append(self.LoadedUserLabel)
             
-            os.makedirs("UserLogs/{}".format(stupidusername),exist_ok=True)
-            with open('UserLogs/{}/{}.txt'.format(stupidusername,self.dataLoaded[count]), 'a', newline='') as f:
-                    print("User log: {} created!".format(self.dataLoaded[count]))
+            #os.makedirs("UserLogs/{}".format(stupidusername),exist_ok=True)
+            #with open('UserLogs/{}/{}.txt'.format(stupidusername,self.dataLoaded[count]), 'a', newline='') as f:
+            #        print("User log: {} created!".format(self.dataLoaded[count]))
             count += 1
                     
             
@@ -526,63 +529,74 @@ class Page_Chat(tk.Frame):
                 #print("removechatwindow widgets: {}".format(widget))
                 #widget.destroy()
                 widget.forget()
-                
+   
+    def OpenUserChat(self,friend):
+        global userfriend
+        userfriend = friend
+            
+        print("\nwhat is friend name: {}".format(friend))
         
-    def OpenUserChat(self,friend,count):
-        #self.removeChatWindows()
-        #print("self.LoadedUserLabels: {}".format(self.LoadedUserLabels))
-        #for i in range(len(self.LoadedUserLabels)):
-        #    friendlist = self.dataLoaded[i]
-            global userfriend
-            userfriend = friend
-            
-            print("\nwhat is friend name: {}".format(friend))
-            #print("what is friendlist {}".format(friendlist))
-            
-            self.removeChatWindows()
-            
-            self.ChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
-            self.ChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
-            self.userchatLabel = tk.Label(self.ChatWindowUserFrame,text="{}'s Chat".format(friend),bg="magenta", fg="black",font=('arial',10,'bold'), borderwidth=1)
-            self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)  
-            
-            self.ChatTestFrame = tk.Frame(self.ChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=200,width=500)
-            self.ChatTestFrame.pack(side=tk.TOP)
-            self.ChatTestFrame.pack_propagate(0)
-            
-              
-            #self.chat_box = tk.Text(self.ChatWindowUserFrame, height=25)
-            self.chat_box = tk.Text(self.ChatTestFrame, height=250)
-            self.chat_box.configure(state="disabled")
-            self.chat_box.pack(fill='both',expand=True)
-            
-            logs = PersistentLogs()
-            usertext = logs.ReadLog(userfriend)
-            print("user text: {}".format(usertext))
-            self.chat_box.configure(state="normal")
-            self.chat_box.insert("end",usertext)
-            self.chat_box.configure(state="disabled")
-            
-            scrollbar = tk.Scrollbar(self.chat_box)
-            scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
-            
-            self.chat_box.configure(yscrollcommand=scrollbar.set)
-            scrollbar.config(command=self.chat_box.yview)
-            
-            #self.usernameadd_entry = tk.Entry(self.frameadd_User, width=35,textvariable=self.UsernameAdd)
-            #self.usernameadd_entry.pack(side=tk.RIGHT)
-            self.input_field = tk.Entry(self.ChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
-            self.input_field.pack(side=tk.TOP,pady=1)
-            
-            self.thread1.set(self.chat_box,self.input_field)
-            self.thread2.set(self.chat_box)
-            
-            self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
-            self.button['command'] = self.send_message_button
-            self.button.pack()
-            
-            #print("global click: {}".format(labelClicked))
+        self.removeChatWindows()
         
+        self.ChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
+        self.ChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
+        self.userchatLabel = tk.Label(self.ChatWindowUserFrame,text="{}'s Chat".format(friend),bg="magenta", fg="black",font=('arial',10,'bold'), borderwidth=1)
+        self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)  
+        
+        self.ChatTestFrame = tk.Frame(self.ChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=200,width=500)
+        self.ChatTestFrame.pack(side=tk.TOP)
+        self.ChatTestFrame.pack_propagate(0)
+        
+          
+        #self.chat_box = tk.Text(self.ChatWindowUserFrame, height=25)
+        self.chat_box = tk.Text(self.ChatTestFrame, height=250)
+        self.chat_box.configure(state="disabled")
+        self.chat_box.pack(fill='both',expand=True)
+        
+        logs = self.ReadLogs()
+        self.chat_box.configure(state="normal")
+        self.chat_box.insert("end","\n"+logs)
+        self.chat_box.configure(state="disabled")
+        self.chat_box.see("end")
+        
+        scrollbar = tk.Scrollbar(self.chat_box)
+        scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
+        
+        self.chat_box.configure(yscrollcommand=scrollbar.set)
+        scrollbar.config(command=self.chat_box.yview)
+        
+        #self.usernameadd_entry = tk.Entry(self.frameadd_User, width=35,textvariable=self.UsernameAdd)
+        #self.usernameadd_entry.pack(side=tk.RIGHT)
+        self.input_field = tk.Entry(self.ChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
+        self.input_field.pack(side=tk.TOP,pady=1)
+        self.input_field.bind("<Return>",self.key_sendmsg)
+        self.input_field.focus()
+        
+        self.thread1.set(self.chat_box,self.input_field)
+        self.thread2.set(self.chat_box)
+        
+        self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
+        self.button['command'] = self.send_message_button
+        self.button.pack()
+    
+    def ReadLogs(self):
+        global userfriend
+        self.logssocket = socket(AF_INET,SOCK_STREAM)
+        self.logssocket.connect((SERVER_IP, LOGS_PORT))
+        # Data structure: [usernameLogin, usernameFriend]
+        self.data_string = pickle.dumps([stupidusername, userfriend])
+        self.logssocket.send(self.data_string)
+        self.data = self.logssocket.recv(BUFFER_SIZE)
+        self.data = pickle.loads(self.data)
+        print("server logs: {}".format(self.data))
+        
+        return self.data  
+            
+    def key_sendmsg(self, event):
+        #self.AddShit()
+        print("SHOULD SEND MSG")
+        self.send_message_button() 
+        self.input_field.delete(0, 'end')            
         
     def send_message_button(self):
         self.thread1.send()
@@ -592,6 +606,22 @@ class Page_Chat(tk.Frame):
         self.thread1.send()
         self.input_field.delete(0, "end")
         return "break"
+
+class Page_GroupChat(tk.Frame):
+     def __init__(self,parent,controller):
+        tk.Frame.__init__(self,parent)
+        
+        self.controller = controller
+        self.UsernameLogin = tk.StringVar()
+        self.PasswordLogin = tk.StringVar()
+        
+        print("PAGE_LOGIN Am I printing this? 1")
+        
+        self.frame_master = tk.Frame(master=self, 
+                               borderwidth=1, 
+                               background="blue",
+                               highlightthickness=5,)
+        self.frame_master.pack(side=tk.TOP, fill='both',expand=True)
     
 class SendData():
     def __init__(self,tcp_socket, user):
@@ -609,8 +639,11 @@ class SendData():
                 self.chat.insert("end","\nYOU: {}".format(send_data))
                 self.chat.configure(state="disabled")
                 self.chat.see("end")
-                logs = PersistentLogs()
-                logs.WriteToLog(userfriend,"YOU: {}".format(send_data))
+                #logs = PersistentLogs()
+                #logs.WriteToLog(userfriend,"YOU: {}".format(send_data))
+                print("size of chat_string: {}".format(self.utf8len(chat_string)))
+    def utf8len(self, s):
+        return len(s.encode('utf-8'))
     def exit(self):
             chat_data=[self.uu, "EEXIT"]
             chat_string = pickle.dumps(chat_data)
@@ -625,13 +658,17 @@ class ReceiveData(threading.Thread):
         threading.Thread.__init__(self)
         self.ds=tcp_socket
         self.event = event
+        self.storeddata = []
     def run(self):
         self.ds.setblocking(0)
         while True:
             ready = select.select([self.ds], [], [])
             if ready[0]:
                 recv_string = self.ds.recv(BUFFER_SIZE)
-                recv_data = pickle.loads(recv_string)
+                if not recv_data: break
+                self.storeddata.append(recv_data)
+                recv_data = pickle.loads(recv_string.join(self.storeddata))
+                
                 if (recv_data[0] != "Server"):
                     if userfriend == recv_data[0]:
                         self.chat.configure(state="normal")
@@ -639,8 +676,8 @@ class ReceiveData(threading.Thread):
                         self.chat.insert("end","\n"+msg)
                         self.chat.configure(state="disabled")
                         self.chat.see("end")
-                        logs = PersistentLogs()
-                        logs.WriteToLog(userfriend,msg)
+                        #logs = PersistentLogs()
+                        #logs.WriteToLog(userfriend,msg)
                         print("Received!!!!!!!")
                 else:
                     print(recv_data[1])
