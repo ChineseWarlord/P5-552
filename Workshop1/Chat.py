@@ -185,7 +185,7 @@ class Page_Login(tk.Frame):
             
             self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
             self.UserChatSocket1.connect((SERVER_IP, SERVER_PORT))
-            connect_list=["CONNECT",stupidusername]
+            connect_list=["CONNECT",data_User]
             print("connect_list: ",connect_list)
             data_string = pickle.dumps(connect_list)
             self.UserChatSocket1.send(data_string)
@@ -704,23 +704,7 @@ class ReceiveData(threading.Thread):
                     
     def set(self,chat_box):
         self.chat = chat_box   
- 
-class PersistentLogs():
-    def __init__(self):
-        print()
-        
-    def WriteToLog(self,user,msg):
-        with open('UserLogs/{}/{}.txt'.format(stupidusername,user), 'a', newline='') as f:
-        #with open('UserLogs/test.txt', 'a', newline='') as f:
-            f.write(msg+"\n")
-        
-    def ReadLog(self,user):
-        with open('UserLogs/{}/{}.txt'.format(stupidusername,user), 'r', newline='') as f:
-        #with open('UserLogs/test.txt', 'r', newline='') as f:
-            text = f.read()
-            print(text)
-            return text
-        
+
         
         
         

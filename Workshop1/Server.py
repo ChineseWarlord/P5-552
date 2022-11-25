@@ -320,11 +320,13 @@ class ClientThread(threading.Thread):
                 recv_data = pickle.loads(recv_string)
                 
                 # msg structure: [userlogin, msg, toUser]
+                print("\n=============================================")
                 print("What is recv_data: {}".format(recv_data))
                 print("What is recv_data[0]: {}".format(recv_data[0]))
                 print("What is recv_data[1]: {}".format(recv_data[1]))
                 print("What is recv_data[2]: {}".format(recv_data[2]))
-              
+                print("=============================================\n")
+                
                 if recv_data[1] == "EEXIT":
                     self.usernames.remove(uusername)
                     print(self.usernames)
@@ -341,15 +343,46 @@ class ClientThread(threading.Thread):
                     break
                 else:
                     for x in UserSockets:
+                        print("\n=============================================")
+                        print("1 What is x: {}".format(x))
+                        print("1 what is x[0]: {}".format(x[0]))
+                        print("1 what is x[1]: {}".format(x[1]))
+                        print("=============================================\n")
                         if x[1] == recv_data[2]:
-                            print("what is x? {}".format(x))
+                            #print("what is x? {}".format(x))
+                            print("\n=============================================")
+                            print("2 What is x: {}".format(x))
+                            print("2 what is x[0]: {}".format(x[0]))
+                            print("2 what is x[1]: {}".format(x[1]))
                             x[0].send(recv_string)
                             print("Sender til {}".format(recv_data[2]))
+                            print("=============================================\n")
                             logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
-                        else:
-                            print("Message received from {}: {}".format(recv_data[0],recv_data[1]))
-                            print("User: {} is not currently online".format(recv_data[2]))
-                            logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                        else:    
+                        #if x[1] != recv_data[2]:
+                        #    print("\n=============================================")
+                        #    print("3 What is x: {}".format(x))
+                        #    print("3 what is x[0]: {}".format(x[0]))
+                        #    print("3 what is x[1]: {}".format(x[1]))
+                        #    print("Message received from {}: {}".format(recv_data[0],recv_data[1]))
+                        #    print("1 User: {} is not currently online".format(recv_data[2]))
+                        #    #logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                        #    print("=============================================\n")
+                        
+                        # msg structure: [userlogin, msg, toUser]
+                            #if recv_data[2] not in x[1]:
+                                print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                                print("2 User: {} is not currently online".format(recv_data[2]))
+                                logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+                        
+                        #print("\n=============================================")
+                        #print("This is the socket x[0]: {}".format(x[0]))
+                        #print("The socket belongs to x[1]: {}".format(x[1]))
+                        #print("The message was sent from recv[0]: {}".format(recv_data[0]))
+                        #print("The message was recv[1]: {}".format(recv_data[1]))
+                        #print("The message is sent to recv[2]: {}".format(recv_data[2]))
+                        #print("=============================================\n")    
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
