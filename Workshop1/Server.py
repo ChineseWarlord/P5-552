@@ -315,6 +315,14 @@ class ClientThread(threading.Thread):
             print("UserSockets: {}".format(UserSockets))
             logs = PersistentLogs()
             
+            # Lav ny variabel hvor du gemmer sockets og bruger den er fra
+            # Lav ny variabel hvor du gemmer hvor beskeden skal sendes til
+            # Hvis socket + bruger ikke er i den nye variabel
+            # Lad vær med at skriv til persistent logs
+            
+            # Hvis socket + bruger er i den nye variabel
+            # Skriv til persistent logs
+            
             while True:
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
