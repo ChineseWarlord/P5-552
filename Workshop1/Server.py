@@ -5,6 +5,7 @@ from threading import Thread
 from socket import *
 from multiprocessing import Process
 import os
+import time
 
 HOST = ''           # Symbolic name meaning all available interfaces
 LOAD_USER_PORT = 1000
@@ -382,9 +383,23 @@ class UserLogThread(threading.Thread):
             
             # Data structure: ReadLog(usernameLogin, usernameFriend)
             logs = PersistentLogs()
+            
             Wall_of_Text = logs.ReadLog(self.data[0],self.data[1])
-            Wall_of_Text = pickle.dumps(Wall_of_Text)
-            self.clientsock.send(Wall_of_Text)
+            print("Wall_of_Text: {}".format(Wall_of_Text))
+            
+            #Wall_of_Text = pickle.dumps(Wall_of_Text)
+            #self.clientsock.send(Wall_of_Text)
+            
+            for i in Wall_of_Text:
+                print("Wall_of_Text: {}".format(i))
+                Wall_of_Text = pickle.dumps(i)
+                #time.sleep(0.1)
+                self.clientsock.send(Wall_of_Text)
+                
+            time.sleep(0.1)
+            STOP = "STOP NU FOR HELVEDE"
+            STOP = pickle.dumps(STOP)
+            self.clientsock.send(STOP)
               
 class PersistentLogs():
     def __init__(self):
@@ -407,11 +422,24 @@ class PersistentLogs():
         
     def ReadLog(self,user,userfriend,):
         text = ""
+        text2 = []
         with open('UserLogs/{}/{}.txt'.format(user,userfriend), 'r', newline='') as f:
         #with open('UserLogs/test.txt', 'r', newline='') as f:
-            text = f.read()
-            print(text)
-            return text
+            #text = f.read()
+            #print(text)
+            text2 = f.readlines()
+            #text = f.read()
+            #text = f.readlines()
+            #print("text2: {}".format(text2))
+            #for line in f:
+            #    text2.append(line.rstrip())
+            #    print("text2: {}".format(text2))
+            #    #text2.append(line)
+            #    return text2
+            STOP = "YOU: STOP\n"
+            text2.append(STOP)
+            print("text2: {}".format(text2))
+            return text2
         
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)

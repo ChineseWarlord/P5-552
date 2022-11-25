@@ -20,13 +20,15 @@ import threading
 import time
 import pickle
 import os
+import sys
+import select
 
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 1234
 VERIFY_PORT = 65432
 LOGS_PORT = 65433
 LOAD_USER_PORT = 1000
-BUFFER_SIZE = 1024
+BUFFER_SIZE = 10000
 
 root = tk.Tk()
 #root.withdraw()
@@ -395,6 +397,7 @@ class Page_Chat(tk.Frame):
         self.frame4.pack(side=tk.TOP,fill='both',expand=True)
         self.Chat_Label = tk.Label(self.frame4,text="Chat Window", bg="green", fg="white",font=('arial',10,'bold'), borderwidth=1)
         self.Chat_Label.pack(side=tk.TOP,fill=tk.X,expand=False)
+          
     
     def key_pressed(self, event):
         #self.AddShit()
@@ -441,7 +444,6 @@ class Page_Chat(tk.Frame):
         self.Add_User_Button.pack(side=tk.LEFT)
         self.Add_User_EXIT_Button = tk.Button(self.frameadd_User_BUT, text="EXIT",command=lambda : [self.Add_User_Frame.withdraw(),self.clear_entry()], bg="#211A52", fg = "white")
         self.Add_User_EXIT_Button.pack(side=tk.RIGHT)
-        
         
     def addUserFriend(self):
         # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
@@ -553,11 +555,15 @@ class Page_Chat(tk.Frame):
         self.chat_box.configure(state="disabled")
         self.chat_box.pack(fill='both',expand=True)
         
+        self.stored_logs = []
         logs = self.ReadLogs()
+        #print("logs: ", logs)
         self.chat_box.configure(state="normal")
-        self.chat_box.insert("end","\n"+logs)
+        #self.chat_box.insert("end","\n"+logs) ORIGINAL
+        for i in self.stored_logs:
+            self.chat_box.insert("end",i)
         self.chat_box.configure(state="disabled")
-        self.chat_box.see("end")
+        #self.chat_box.see("end")
         
         scrollbar = tk.Scrollbar(self.chat_box)
         scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
@@ -581,20 +587,43 @@ class Page_Chat(tk.Frame):
     
     def ReadLogs(self):
         global userfriend
+        self.storeddata = []
+        self.data = ""
         self.logssocket = socket(AF_INET,SOCK_STREAM)
         self.logssocket.connect((SERVER_IP, LOGS_PORT))
         # Data structure: [usernameLogin, usernameFriend]
         self.data_string = pickle.dumps([stupidusername, userfriend])
         self.logssocket.send(self.data_string)
-        self.data = self.logssocket.recv(BUFFER_SIZE)
-        self.data = pickle.loads(self.data)
-        print("server logs: {}".format(self.data))
         
-        return self.data  
+        
+        while True:
+            self.data = self.logssocket.recv(BUFFER_SIZE)
+            #if not self.data:
+            #    print("Inside break statement")
+            #    self.logssocket.close() 
+            #    break
+            self.data = pickle.loads(self.data)
+            print("server logs: {}".format(self.data))
+            self.stored_logs.append(self.data)
+            print("self.stored_logs: {}".format(self.stored_logs))
+            
+            if "STOP NU FOR HELVEDE" in self.stored_logs:
+                self.logssocket.close()
+                break
+            
+            
+          
+                
+        #self.logssocket.close()
+        #return self.stored_logs
+        
+        #self.chat_box.insert("end","\n"+self.data)
+        #self.chat_box.configure(state="disabled")
+        #self.chat_box.see("end") 
+            #return self.data
             
     def key_sendmsg(self, event):
         #self.AddShit()
-        print("SHOULD SEND MSG")
         self.send_message_button() 
         self.input_field.delete(0, 'end')            
         
@@ -639,11 +668,6 @@ class SendData():
                 self.chat.insert("end","\nYOU: {}".format(send_data))
                 self.chat.configure(state="disabled")
                 self.chat.see("end")
-                #logs = PersistentLogs()
-                #logs.WriteToLog(userfriend,"YOU: {}".format(send_data))
-                print("size of chat_string: {}".format(self.utf8len(chat_string)))
-    def utf8len(self, s):
-        return len(s.encode('utf-8'))
     def exit(self):
             chat_data=[self.uu, "EEXIT"]
             chat_string = pickle.dumps(chat_data)
