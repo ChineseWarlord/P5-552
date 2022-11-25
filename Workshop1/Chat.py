@@ -556,14 +556,15 @@ class Page_Chat(tk.Frame):
         self.chat_box.pack(fill='both',expand=True)
         
         self.stored_logs = []
-        logs = self.ReadLogs()
+        self.ReadLogs()
+        self.stored_logs.remove("STOP NU FOR HELVEDE")
         #print("logs: ", logs)
         self.chat_box.configure(state="normal")
         #self.chat_box.insert("end","\n"+logs) ORIGINAL
         for i in self.stored_logs:
             self.chat_box.insert("end",i)
         self.chat_box.configure(state="disabled")
-        #self.chat_box.see("end")
+        self.chat_box.see("end")
         
         scrollbar = tk.Scrollbar(self.chat_box)
         scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
@@ -603,17 +604,14 @@ class Page_Chat(tk.Frame):
             #    self.logssocket.close() 
             #    break
             self.data = pickle.loads(self.data)
-            print("server logs: {}".format(self.data))
+            #print("server logs: {}".format(self.data))
             self.stored_logs.append(self.data)
-            print("self.stored_logs: {}".format(self.stored_logs))
+            #print("self.stored_logs: {}".format(self.stored_logs))
             
             if "STOP NU FOR HELVEDE" in self.stored_logs:
                 self.logssocket.close()
                 break
             
-            
-          
-                
         #self.logssocket.close()
         #return self.stored_logs
         
@@ -689,9 +687,7 @@ class ReceiveData(threading.Thread):
             ready = select.select([self.ds], [], [])
             if ready[0]:
                 recv_string = self.ds.recv(BUFFER_SIZE)
-                if not recv_data: break
-                self.storeddata.append(recv_data)
-                recv_data = pickle.loads(recv_string.join(self.storeddata))
+                recv_data = pickle.loads(recv_string)
                 
                 if (recv_data[0] != "Server"):
                     if userfriend == recv_data[0]:
