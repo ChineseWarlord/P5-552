@@ -385,13 +385,13 @@ class UserLogThread(threading.Thread):
             logs = PersistentLogs()
             
             Wall_of_Text = logs.ReadLog(self.data[0],self.data[1])
-            print("Wall_of_Text: {}".format(Wall_of_Text))
+            #print("Wall_of_Text: {}".format(Wall_of_Text))
             
             #Wall_of_Text = pickle.dumps(Wall_of_Text)
             #self.clientsock.send(Wall_of_Text)
             
             for i in Wall_of_Text:
-                print("Wall_of_Text: {}".format(i))
+                #print("Wall_of_Text: {}".format(i))
                 Wall_of_Text = pickle.dumps(i)
                 #time.sleep(0.1)
                 self.clientsock.send(Wall_of_Text)
@@ -409,10 +409,11 @@ class PersistentLogs():
         file1 = open('UserLogs/{}/{}.txt'.format(user,userfriend), 'a', newline='')
         #file1.write("YOU: "+msg+"\n") ORIGINAL
         file1.write("YOU: "+msg+"\n")
-        
+        file1.close()
         file2 = open('UserLogs/{}/{}.txt'.format(userfriend,user), 'a', newline='')
         #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
         file2.write("{}: ".format(user)+msg+"\n")
+        file2.close()
             
     def WriteToLogSelf(self,user,msg,userfriend):
         with open('UserLogs/{}/{}.txt'.format(user,user), 'a', newline='') as f:
@@ -436,9 +437,6 @@ class PersistentLogs():
             #    print("text2: {}".format(text2))
             #    #text2.append(line)
             #    return text2
-            STOP = "YOU: STOP\n"
-            text2.append(STOP)
-            print("text2: {}".format(text2))
             return text2
         
 server = socket(AF_INET, SOCK_STREAM)
