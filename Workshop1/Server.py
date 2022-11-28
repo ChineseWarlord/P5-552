@@ -7,10 +7,10 @@ from multiprocessing import Process
 import os
 import time
 
-HOST = ''           # Symbolic name meaning all available interfaces
+HOST = '127.0.0.1'           # Symbolic name meaning all available interfaces
 LOAD_USER_PORT = 1000
 BASE_PORT = 1234    # Arbitrary non-privileged port
-PP = 65432  # Port to listen on (non-privileged ports are > 1023)
+PP = 2001  # Port to listen on (non-privileged ports are > 1023)
 LOGS_PORT = 65433
 
 BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
@@ -75,17 +75,27 @@ class VerifyThread(threading.Thread):
             self.data2.pop(2)
             print("DELETED test: ", self.data2)
             if self.Data_Check == "userregister":
-                    self.Check_User_Register()
-                    self.conn.close()
+                self.Check_User_Register()
+                #self.conn.close()
             if self.Data_Check == "userlogin":
-                    self.Check_User_Login()
-                    self.conn.close()
+                self.Check_User_Login()
+                #self.conn.close()
             if self.Data_Check == "UserAdd":
-                    global LoginName
-                    LoginName = self.Data_Pass
-                    self.Add_User()
-                    self.conn.close()
-
+                global LoginName
+                LoginName = self.Data_Pass
+                self.Add_User()
+                #self.conn.close()
+            if self.Data_check == "UserAddGroup":
+                self.CreateGroup()
+                self.conn.close()
+    def CreateGroup(self):
+        GroupName = self.Data_User
+        global LoginName
+        
+        os.makedirs("UserGroups",exist_ok=True) 
+        os.makedirs("UserGroups/{}".format(LoginName),exist_ok=True)
+        open("UserGroups/{}/{}.csv".format(LoginName,GroupName), "a")
+        
     def Add_User(self):
         # Checks Users CSV for logged users
         # If trying to add user exits add user to current users friendlist
@@ -258,7 +268,6 @@ class LoadUsersThread(threading.Thread):
             LoadUsersData = pickle.dumps(UserFriendList)
             self.conn.send(LoadUsersData)
 
-
 class ClientThread(threading.Thread):
     def __init__(self,clientAddress,clientsocket,cc,uu,ii,pi,hi):
         threading.Thread.__init__(self)
@@ -371,22 +380,6 @@ class ClientThread(threading.Thread):
                         if x[1] != recv_data[2]:
                             x[0].send(recv_string)
                             logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
-                        #    print("=============================================\n")
-                        
-                        # msg structure: [userlogin, msg, toUser]
-                            #if recv_data[2] not in x[1]:
-                                ###print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                                ###print("2 User: {} is not currently online".format(recv_data[2]))
-                                ###logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
-                                ###print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
-                        
-                        #print("\n=============================================")
-                        #print("This is the socket x[0]: {}".format(x[0]))
-                        #print("The socket belongs to x[1]: {}".format(x[1]))
-                        #print("The message was sent from recv[0]: {}".format(recv_data[0]))
-                        #print("The message was recv[1]: {}".format(recv_data[1]))
-                        #print("The message is sent to recv[2]: {}".format(recv_data[2]))
-                        #print("=============================================\n")    
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
