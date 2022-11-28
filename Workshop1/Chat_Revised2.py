@@ -462,7 +462,9 @@ class Page_Chat(tk.Frame):
     def addUserGroup(self):
         # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
         self.seX = socket(AF_INET,SOCK_STREAM)
-        self.seX.connect((SERVER_IP, VERIFY_PORT))
+        #self.seX.connect((SERVER_IP, VERIFY_PORT))
+        self.seX.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        self.seX.connect((SERVER_IP, 39612))
         
         TryToAddUserGroup = self.UsernameAddGroup.get()
         self.data_string = pickle.dumps([TryToAddUserGroup,stupidusername, "UserAddGroup"])
@@ -479,20 +481,21 @@ class Page_Chat(tk.Frame):
             self.Add_User_Frame.withdraw()
             self.removeUsers()
             self.LoadUserFriends()
+            self.seX.close()
         if datax[0] == "ALREADY IN GROUPLIST!":
             print("USER ALREADY IN GROUPLIST!")
             shit1 = "ALREADY IN GROUPLIST!"
             self.username_tryadd_label.config(text="User already in friendlist", fg="red", font=('arial',10,'bold'))
-            return shit1
+            self.seX.close()
         if datax[0] == "TRIED TO ADD YOURSELF!":
             shit2 = "TRIED TO ADD YOURSELF"
             print("TRIED TO ADD YOURSELF!")
             self.username_tryadd_label.config(text="Tried to add yourself!", fg="red", font=('arial',10,'bold'))
-            return shit2
+            self.seX.close()
         if datax[0] == "USER DOES NOT EXIST!":
             shit3 = "USER NOT EXIST"
             self.username_tryadd_label.config(text="User does not exist!", fg="red", font=('arial',10,'bold'))
-            return shit3
+            self.seX.close()
     
     def key_pressed(self, event):
         #self.AddShit()
@@ -542,6 +545,8 @@ class Page_Chat(tk.Frame):
     def addUserFriend(self):
         # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
         self.se = socket(AF_INET,SOCK_STREAM)
+        #self.se.connect((SERVER_IP, VERIFY_PORT))
+        self.se.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
         self.se.connect((SERVER_IP, VERIFY_PORT))
         
         TryToAddUser = self.UsernameAdd.get()
@@ -559,20 +564,21 @@ class Page_Chat(tk.Frame):
             self.Add_User_Frame.withdraw()
             self.removeUsers()
             self.LoadUserFriends()
+            self.se.close()
         if datax[0] == "ALREADY IN FRIENDLIST!":
             print("USER ALREADY IN FRIENDLIST")
             shit1 = "ALREADY IN FRIENDLIST"
             self.username_tryadd_label.config(text="User already in friendlist", fg="red", font=('arial',10,'bold'))
-            return shit1
+            self.se.close()
         if datax[0] == "TRIED TO ADD YOURSELF!":
             shit2 = "TRIED TO ADD YOURSELF"
             print("TRIED TO ADD YOURSELF!")
             self.username_tryadd_label.config(text="Tried to add yourself!", fg="red", font=('arial',10,'bold'))
-            return shit2
+            self.se.close()
         if datax[0] == "USER DOES NOT EXIST!":
             shit3 = "USER NOT EXIST"
             self.username_tryadd_label.config(text="User does not exist!", fg="red", font=('arial',10,'bold'))
-            return shit3
+            self.se.close()
         # In server check if the user, trying to be added, is in database - if in database add user to USER_DATA     
  
     def LoadUserFriends(self):

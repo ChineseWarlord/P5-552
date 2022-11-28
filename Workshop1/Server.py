@@ -52,49 +52,75 @@ class VerifyThread(threading.Thread):
             self.s.bind((HOST, PP))
             self.s.listen()
             self.conn, addr = self.s.accept()
-            #with self.conn:
-            print("Connected to verify thread!")
-            print("socket: {}".format(self.conn))
-            print(f"IP address: {addr}")
             
-            
-            data = self.conn.recv(BUFFER_SIZE)
-            self.data2 = pickle.loads(data)
-            print("Data: {}".format(self.data2))
-            self.Data_User = self.data2[0]
-            self.Data_Pass = self.data2[1]
-            self.Data_Check = self.data2[2]
-            self.Data_UserPass = self.data2[0]+self.data2[1]
-            print("Data_User: {}".format(self.Data_User))  
-            print("Data_Pass: {}".format(self.Data_Pass))
-            print("Data_Check: {}".format(self.Data_Check))
-            print("Data_UserPass: {}".format(self.Data_UserPass)) 
-            #text = "OK - Cancer"
-            #self.data_string = pickle.dumps(text)
-            #self.conn.send(self.data_string)
-            self.data2.pop(2)
-            print("DELETED test: ", self.data2)
-            if self.Data_Check == "userregister":
-                self.Check_User_Register()
-                #self.conn.close()
-            if self.Data_Check == "userlogin":
-                self.Check_User_Login()
-                #self.conn.close()
-            if self.Data_Check == "UserAdd":
-                global LoginName
-                LoginName = self.Data_Pass
-                self.Add_User()
-                #self.conn.close()
-            if self.Data_check == "UserAddGroup":
-                self.CreateGroup()
-                self.conn.close()
+            with self.conn:
+                print("Connected to verify thread!")
+                print("socket: {}".format(self.conn))
+                print(f"IP address: {addr}")
+
+
+                data = self.conn.recv(BUFFER_SIZE)
+                self.data2 = pickle.loads(data)
+                print("Data: {}".format(self.data2))
+                # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+                self.Data_User = self.data2[0]
+                self.Data_Pass = self.data2[1]
+                self.Data_Check = self.data2[2]
+                self.Data_UserAddToGroup = self.data2[3]
+                self.Data_UserPass = self.data2[0]+self.data2[1]
+                print("Data_User: {}".format(self.Data_User))  
+                print("Data_Pass: {}".format(self.Data_Pass))
+                print("Data_Check: {}".format(self.Data_Check))
+                print("Data_UserPass: {}".format(self.Data_UserPass)) 
+                #text = "OK - Cancer"
+                #self.data_string = pickle.dumps(text)
+                #self.conn.send(self.data_string)
+                self.data2.pop(2)
+                print("DELETED test: ", self.data2)
+                if self.Data_Check == "userregister":
+                    self.Check_User_Register()
+                    #self.conn.close()
+                if self.Data_Check == "userlogin":
+                    self.Check_User_Login()
+                    #self.conn.close()
+                if self.Data_Check == "UserAdd":
+                    global LoginName
+                    LoginName = self.Data_Pass
+                    self.Add_User()
+                    #self.conn.close()
+                if self.Data_Check == "UserAddGroup":
+                    self.CreateGroup()
+                    #self.conn.close()
+                    
     def CreateGroup(self):
-        GroupName = self.Data_User
+        GroupName = self.Data_Pass
+        UserToAdd = self.Data_UserAddToGroup 
         global LoginName
         
         os.makedirs("UserGroups",exist_ok=True) 
         os.makedirs("UserGroups/{}".format(LoginName),exist_ok=True)
-        open("UserGroups/{}/{}.csv".format(LoginName,GroupName), "a")
+        
+        GroupExist = os.path.exists("UserGroups/{}/{}.csv".format(LoginName,GroupName))
+        if GroupExist == False:
+            open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a")
+            with open("UserGroups/{}/{}.csv".format(LoginName,GroupName), 'r') as f:
+                csv_reader = csv.reader(f, delimiter=',')
+                for line in csv_reader:
+                    cunt = line
+                    print("What is cunt?:",cunt)
+            with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow([UserToAdd])
+                print("GROUP CREATED!")
+                self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
+        else:
+            print("Adding to grouplist!")
+            with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow([UserToAdd])
+            self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))
+        
+            
         
     def Add_User(self):
         # Checks Users CSV for logged users
@@ -234,7 +260,7 @@ class VerifyThread(threading.Thread):
                     print("allUser: {}".format(allUsers))
                
     
-class LoadUsersThread(threading.Thread):
+class LoadDataThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         #print("Loading users...\n")
@@ -246,20 +272,27 @@ class LoadUsersThread(threading.Thread):
             self.conn, addr = self.socketLoad.accept()
             #with self.conn:
             print(f"LOAD USERS : Connected by {addr}")
-            # ([stupidusername,"Load_User"])
+            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
             data = self.conn.recv(BUFFER_SIZE)
             self.data2 = pickle.loads(data)
             print("Data: {}".format(self.data2))
-            self.Data_User = self.data2[0]
-            self.Data_Check = self.data2[1]
-            print("Data_User: {}".format(self.Data_User)) 
+            self.Data_GroupName = self.data2[0]
+            self.Data_UserToAdd = self.data2[1]
+            self.Data_LoginName = self.data2[2]
+            self.Data_Check = self.data2[3]
+            print("Data_GroupName: {}".format(self.Data_GroupName)) 
+            print("Data_UserToAdd: {}".format(self.Data_UserToAdd)) 
+            print("Data_LoginName: {}".format(self.Data_LoginName)) 
             print("Data_Check: {}".format(self.Data_Check))
             
-            self.LoadingUsers()
-            
+            if self.Data_Check == "Load_Users":
+                self.LoadingUsers()
+            if self.Data_Check == "Load_Groups":
+                self.LoadingGroups()
+                
     def LoadingUsers(self):
         UserFriendList = []
-        with open('UserFriends/{}.csv'.format(self.Data_User), 'r') as f:
+        with open('UserFriends/{}.csv'.format(self.Data_LoginName), 'r') as f:
             csv_reader = csv.reader(f, delimiter=',')
             for line3 in csv_reader:
                 cunt3 = line3[0]
@@ -267,6 +300,8 @@ class LoadUsersThread(threading.Thread):
                 print("UserFriendList: {}".format(UserFriendList))
             LoadUsersData = pickle.dumps(UserFriendList)
             self.conn.send(LoadUsersData)
+    def LoadingGroups(self):
+        print()
 
 class ClientThread(threading.Thread):
     def __init__(self,clientAddress,clientsocket,cc,uu,ii,pi,hi):
@@ -338,9 +373,13 @@ class ClientThread(threading.Thread):
                 print("-----------------------------------")
                 print("Users in socket list: \n{}".format(UserSockets))
                 print("-----------------------------------")
+                
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
-                
+                if len(recv_string) == 0: 
+                        print("Closed shit")
+                        break
+                print("Not printing anymore")    
                 # msg structure: [userlogin, msg, toUser]
                 print("\n=============================================")
                 print("What is recv_data: {}".format(recv_data))
@@ -348,7 +387,6 @@ class ClientThread(threading.Thread):
                 print("What is recv_data[1]: {}".format(recv_data[1]))
                 print("What is recv_data[2]: {}".format(recv_data[2]))
                 print("=============================================\n")
-                
                 if recv_data[1] == "EEXIT":
                     print("==================================\n==================================")
                     print("This is current username:", uusername)
@@ -362,6 +400,7 @@ class ClientThread(threading.Thread):
                     print(self.userids)
                     self.counter=self.counter-1
                     print("==================================\n==================================")
+                    ds.send(pickle.dumps("CLOSE CONN"))
                     ds.close()
                     print('*** Connection closed. Status: active/maximum users: {}/{}'.format(len(self.usernames),MAX_USERS))
                     print('    username: {}'.format(data_list[1]))
@@ -374,12 +413,14 @@ class ClientThread(threading.Thread):
                     break
                 else:
                     for x in UserSockets:
-                       
+                    
                         if x[1] == recv_data[2]:
                             x[0].send(recv_string)
                         if x[1] != recv_data[2]:
                             x[0].send(recv_string)
                             logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                            
+                            
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
@@ -426,7 +467,6 @@ class UserLogThread(threading.Thread):
                 #time.sleep(0.1)
                 self.clientsock.send(Wall_of_Text)
                 
-            time.sleep(0.1)
             STOP = "STOP NU FOR HELVEDE"
             STOP = pickle.dumps(STOP)
             self.clientsock.send(STOP)
@@ -462,6 +502,65 @@ class PersistentLogs():
             #    #text2.append(line)
             #    return text2
             return text2
+
+
+
+# TODO:  
+# SKAL FJERNES 
+class VerifyThread2(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.Data_User = []
+        self.Data_Pass = []
+        self.Usernames = []
+        self.Passwords = []
+        
+        while True:
+            self.s = socket(AF_INET, SOCK_STREAM)
+            self.s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.s.bind((HOST, 39612))
+            self.s.listen()
+            self.conn, addr = self.s.accept()
+            #with self.conn:
+            print("Connected to verify thread!")
+            print("socket: {}".format(self.conn))
+            print(f"IP address: {addr}")
+            
+            
+            data = self.conn.recv(BUFFER_SIZE)
+            self.data2 = pickle.loads(data)
+            print("Data: {}".format(self.data2))
+            self.Data_User = self.data2[0]
+            self.Data_Pass = self.data2[1]
+            self.Data_Check = self.data2[2]
+            self.Data_UserPass = self.data2[0]+self.data2[1]
+            print("Data_User: {}".format(self.Data_User))  
+            print("Data_Pass: {}".format(self.Data_Pass))
+            print("Data_Check: {}".format(self.Data_Check))
+            print("Data_UserPass: {}".format(self.Data_UserPass)) 
+            #text = "OK - Cancer"
+            #self.data_string = pickle.dumps(text)
+            #self.conn.send(self.data_string)
+            self.data2.pop(2)
+            print("DELETED test: ", self.data2)
+            if self.Data_Check == "UserAddGroup":
+                self.CreateGroup(self.Data_Pass)
+                self.conn.close()
+                
+    def CreateGroup(self,name):
+        GroupName = self.Data_User
+        global LoginName
+        
+        self.name = name
+        
+        print("LoginName:", self.name)
+        
+        os.makedirs("UserGroups",exist_ok=True) 
+        os.makedirs("UserGroups/{}".format(self.name),exist_ok=True)
+        open("UserGroups/{}/{}.csv".format(self.name,GroupName), "a")
+     
+
+
         
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -475,7 +574,9 @@ if __name__=="__main__":
     
     process1 = Process(target=VerifyThread)
     process1.start()
-    process2 = Process(target=LoadUsersThread)
+    #process4 = Process(target=VerifyThread2)
+    #process4.start()
+    process2 = Process(target=LoadDataThread)
     process2.start()
     process3 = Process(target=UserLogThread)
     process3.start()

@@ -21,11 +21,12 @@ class SendData(threading.Thread):
                 chat_string = pickle.dumps(chat_data)
                 self.ds.send(chat_string)
                 print("Connection closed.")
-                break
+                #break
             else:
                 chat_data=[self.uu,send_data]
                 chat_string = pickle.dumps(chat_data)
                 self.ds.send(chat_string)
+        print("Connection closed. 2")
    
 class ReceiveData(threading.Thread):
     def __init__(self,tcp_socket):
