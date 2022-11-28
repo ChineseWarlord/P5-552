@@ -64,13 +64,9 @@ class Main_View(tk.Tk):
         #self.show_frame(Page_Chat)
         self.frames = {}
         
-    def add_page(self,Name, Page, thread1=0, thread2=0, socketlogin=0, socketchat=0):
-        if Name == "Page_Chat":
-            self.frames[Name] = Page(parent=self.container,controller=self, thread1=thread1,thread2=thread2, socketlogin=socketlogin, socketchat=socketchat)    
-            self.frames[Name].grid(row=0, column=0, sticky="nsew")
-        else:    
-            self.frames[Name] = Page(parent=self.container,controller=self)    
-            self.frames[Name].grid(row=0, column=0, sticky="nsew")
+    def add_page(self,Name, Page):
+        self.frames[Name] = Page(parent=self.container,controller=self)    
+        self.frames[Name].grid(row=0, column=0, sticky="nsew")
         
     def show_frame(self, Page): 
         frame = self.frames[Page]
@@ -184,34 +180,14 @@ class Page_Login(tk.Frame):
             stupidusername = self.data[1]
             print("From Server stupidusername: {}".format(stupidusername))
             self.clear_entry()
+            print("Socket status:",self.se)
+            self.se.send(pickle.dumps(["","","EEXIT"]))
+            print("Socket {} closing".format(self.se))
+            print("Socket status:",self.se)
+            self.se.close()
+            root.add_page("Page_Chat",Page_Chat)
             
             
-            self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
-            self.UserChatSocket1.connect((SERVER_IP, SERVER_PORT))
-            connect_list=["CONNECT",data_User]
-            print("connect_list: ",connect_list)
-            data_string = pickle.dumps(connect_list)
-            self.UserChatSocket1.send(data_string)
-            data = self.UserChatSocket1.recv(BUFFER_SIZE)
-            data_list = pickle.loads(data)
-            print("From server data: {}".format(data_list))
-            print("From server   OK: {}".format(data_list[0]))
-            if data_list[0]=="OK":
-                #self.chat_box.configure(state="normal")
-                #self.chat_box.configure(state="disabled")
-                NEW_PORT=data_list[3]
-                print(NEW_PORT)
-                self.UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
-                self.UserChatSocket2.connect((SERVER_IP, NEW_PORT))
-                self.event = threading.Event()
-                self.thread1 = SendData(self.UserChatSocket2,stupidusername)
-                self.thread2 = ReceiveData(self.UserChatSocket2, self.event)
-                self.thread2.start()
-                root.add_page("Page_Chat",Page_Chat, self.thread1, self.thread2, self.UserChatSocket1, self.UserChatSocket2)
-                #self.pwd_entry_login.unbind("<Return>")
-                #self.UserChatSocket1.close()
-            else:
-                print("Reply from server: server is full. Retry later.")
         
             
             #print("Login socket status: {}".format(self.se))
@@ -313,14 +289,10 @@ class Page_UserRegister(tk.Frame):
             print("Register socket status: {}".format(self.se))            
 
 class Page_Chat(tk.Frame):
-    def __init__(self,parent,controller, thread1,thread2, socketlogin, socketchat):
+    def __init__(self,parent,controller):
         tk.Frame.__init__(self,parent)
         
         self.controller = controller
-        self.thread1 = thread1
-        self.thread2 = thread2
-        self.socketlogin = socketlogin
-        self.socketchat = socketchat
         print("PAGE_CHAT Am I printing this? 1")
         
         
@@ -557,9 +529,6 @@ class Page_Chat(tk.Frame):
         userfriend = friend
             
         print("\nwhat is friend name: {}".format(friend))
-        print("socketlogin status: {}".format(self.socketlogin))
-        print("socketchat status: {}".format(self.socketchat))
-        
         
         self.ChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
         self.ChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
@@ -576,10 +545,11 @@ class Page_Chat(tk.Frame):
         self.chat_box.configure(state="disabled")
         self.chat_box.pack(fill='both',expand=True)
         
+        
         self.stored_logs = []
         self.ReadLogs()
         self.stored_logs.remove("STOP NU FOR HELVEDE")
-        #print("logs: ", logs)
+        
         self.chat_box.configure(state="normal")
         #self.chat_box.insert("end","\n"+logs) ORIGINAL
         for i in self.stored_logs:
@@ -600,12 +570,40 @@ class Page_Chat(tk.Frame):
         self.input_field.bind("<Return>",self.key_sendmsg)
         self.input_field.focus()
         
-        self.thread1.set(self.chat_box,self.input_field)
-        self.thread2.set(self.chat_box)
+        #self.thread1.set(self.chat_box,self.input_field)
+        #self.thread2.set(self.chat_box)
         
         self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
         self.button['command'] = self.send_message_button
         self.button.pack()
+        
+        
+        self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
+        self.UserChatSocket1.connect((SERVER_IP, SERVER_PORT))
+        connect_list=["CONNECT",stupidusername]
+        print("connect_list: ",connect_list)
+        data_string = pickle.dumps(connect_list)
+        self.UserChatSocket1.send(data_string)
+        data = self.UserChatSocket1.recv(BUFFER_SIZE)
+        data_list = pickle.loads(data)
+        print("From server data: {}".format(data_list))
+        print("From server   OK: {}".format(data_list[0]))
+        
+        if data_list[0]=="OK":
+            #self.chat_box.configure(state="normal")
+            #self.chat_box.configure(state="disabled")
+            NEW_PORT=data_list[3]
+            print(NEW_PORT)
+            self.UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
+            self.UserChatSocket2.connect((SERVER_IP, NEW_PORT))
+            self.event = threading.Event()
+            self.thread1 = SendData(self.UserChatSocket2,stupidusername, self.input_field, self.chat_box)
+            self.thread2 = ReceiveData(self.UserChatSocket2, self.chat_box,self.event)
+            self.thread2.start()
+            #self.pwd_entry_login.unbind("<Return>")
+            #self.UserChatSocket1.close()
+        else:
+            print("Reply from server: server is full. Retry later.")
     
     def ReadLogs(self):
         global userfriend
@@ -633,14 +631,6 @@ class Page_Chat(tk.Frame):
                 self.logssocket.close()
                 break
             
-        #self.logssocket.close()
-        #return self.stored_logs
-        
-        #self.chat_box.insert("end","\n"+self.data)
-        #self.chat_box.configure(state="disabled")
-        #self.chat_box.see("end") 
-            #return self.data
-            
     def key_sendmsg(self, event):
         #self.AddShit()
         self.send_message_button() 
@@ -651,6 +641,7 @@ class Page_Chat(tk.Frame):
         self.input_field.delete(0, 'end')
         
     def send_message_enter(self, event):
+        
         self.thread1.send()
         self.input_field.delete(0, "end")
         return "break"
@@ -674,9 +665,11 @@ class Page_GroupChat(tk.Frame):
         self.frame_master.pack(side=tk.TOP, fill='both',expand=True)
     
 class SendData():
-    def __init__(self,tcp_socket, user):
+    def __init__(self,tcp_socket, user, input_field, chat_box):
         self.ds=tcp_socket
         self.uu=user
+        self.input = input_field
+        self.chat = chat_box
     def send(self):
             global userfriend
             send_data = self.input.get()
@@ -686,47 +679,38 @@ class SendData():
                 chat_string = pickle.dumps(chat_data)
                 self.ds.send(chat_string)
                 self.chat.configure(state="normal")
-                self.chat.insert("end","\nYOU: {}".format(send_data))
+                self.chat.insert(tk.END,"\nYOU: {}".format(send_data),"testxa")
                 self.chat.configure(state="disabled")
                 self.chat.see("end")
+            if len(send_data) < 1:
+                print("no input was given")
     def exit(self):
             chat_data=[self.uu, "EEXIT",""]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             print("Connection closed.")
-    def set(self, chat_box,input):
-        self.chat = chat_box
-        self.input = input
            
 class ReceiveData(threading.Thread):
-    def __init__(self,tcp_socket, event):
+    def __init__(self,tcp_socket, chat_box, event):
         threading.Thread.__init__(self)
         self.ds=tcp_socket
+        self.chat = chat_box
         self.event = event
-        self.storeddata = []
     def run(self):
         self.ds.setblocking(0)
         while True:
-            ready = select.select([self.ds], [], [])
-            if ready[0]:
-                recv_string = self.ds.recv(BUFFER_SIZE)
-                recv_data = pickle.loads(recv_string)
+            Eready = select.select([self.ds], [], [])
+            #if ready[0]:
+            recv_string = self.ds.recv(BUFFER_SIZE)
+            recv_data = pickle.loads(recv_string)
                 
-                if (recv_data[0] != "Server"):
+            if (recv_data[0] != "Server"):
                     if userfriend == recv_data[0]:
                         self.chat.configure(state="normal")
                         msg = "{}: {}".format(recv_data[0],recv_data[1])
                         self.chat.insert("end","\n"+msg)
                         self.chat.configure(state="disabled")
                         self.chat.see("end")
-                        #logs = PersistentLogs()
-                        #logs.WriteToLog(userfriend,msg)
-                        print("Received!!!!!!!")
-                else:
-                    print(recv_data[1])
-                    
-    def set(self,chat_box):
-        self.chat = chat_box   
 
         
         

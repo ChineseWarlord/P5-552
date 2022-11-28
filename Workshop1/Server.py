@@ -268,6 +268,7 @@ class ClientThread(threading.Thread):
         self.userids = ii
         self.portids = pi
         self.porthandles = hi
+        self.testUserSocket = []
         print("\n\n=======================")
         print("self.csocket: {}".format(self.csocket))
         print("self.counter: {}".format(self.counter))
@@ -323,7 +324,11 @@ class ClientThread(threading.Thread):
             # Hvis socket + bruger er i den nye variabel
             # Skriv til persistent logs
             
+            
             while True:
+                print("-----------------------------------")
+                print("Users in socket list: \n{}".format(UserSockets))
+                print("-----------------------------------")
                 recv_string =ds.recv(BUFFER_SIZE)
                 recv_data = pickle.loads(recv_string)
                 
@@ -336,6 +341,8 @@ class ClientThread(threading.Thread):
                 print("=============================================\n")
                 
                 if recv_data[1] == "EEXIT":
+                    print("==================================\n==================================")
+                    print("This is current username:", uusername)
                     self.usernames.remove(uusername)
                     print(self.usernames)
                     self.portids.remove(NEW_PORT)
@@ -345,44 +352,33 @@ class ClientThread(threading.Thread):
                     self.userids.remove(indid)
                     print(self.userids)
                     self.counter=self.counter-1
+                    print("==================================\n==================================")
                     ds.close()
                     print('*** Connection closed. Status: active/maximum users: {}/{}'.format(len(self.usernames),MAX_USERS))
                     print('    username: {}'.format(data_list[1]))
+                    for sublist in UserSockets:
+                        if sublist[1] == uusername:
+                            print("sublist:",sublist)
+                            print("UserSockets:",UserSockets)
+                            UserSockets.remove(sublist)
+                            print("removing sublist from UserSockets:",UserSockets)
                     break
                 else:
                     for x in UserSockets:
-                        print("\n=============================================")
-                        print("1 What is x: {}".format(x))
-                        print("1 what is x[0]: {}".format(x[0]))
-                        print("1 what is x[1]: {}".format(x[1]))
-                        print("=============================================\n")
+                       
                         if x[1] == recv_data[2]:
-                            #print("what is x? {}".format(x))
-                            print("\n=============================================")
-                            print("2 What is x: {}".format(x))
-                            print("2 what is x[0]: {}".format(x[0]))
-                            print("2 what is x[1]: {}".format(x[1]))
                             x[0].send(recv_string)
-                            print("Sender til {}".format(recv_data[2]))
-                            print("=============================================\n")
+                        if x[1] != recv_data[2]:
+                            x[0].send(recv_string)
                             logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
-                        else:    
-                        #if x[1] != recv_data[2]:
-                        #    print("\n=============================================")
-                        #    print("3 What is x: {}".format(x))
-                        #    print("3 what is x[0]: {}".format(x[0]))
-                        #    print("3 what is x[1]: {}".format(x[1]))
-                        #    print("Message received from {}: {}".format(recv_data[0],recv_data[1]))
-                        #    print("1 User: {} is not currently online".format(recv_data[2]))
-                        #    #logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
                         #    print("=============================================\n")
                         
                         # msg structure: [userlogin, msg, toUser]
                             #if recv_data[2] not in x[1]:
-                                print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                                print("2 User: {} is not currently online".format(recv_data[2]))
-                                logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
-                                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
+                                ###print("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                                ###print("2 User: {} is not currently online".format(recv_data[2]))
+                                ###logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                                ###print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n")
                         
                         #print("\n=============================================")
                         #print("This is the socket x[0]: {}".format(x[0]))
@@ -449,18 +445,12 @@ class PersistentLogs():
     def WriteToLog(self,user,msg,userfriend):
         file1 = open('UserLogs/{}/{}.txt'.format(user,userfriend), 'a', newline='')
         #file1.write("YOU: "+msg+"\n") ORIGINAL
-        file1.write("YOU: "+msg+"\n")
+        file1.write("\nYOU: "+msg+"\n")
         file1.close()
         file2 = open('UserLogs/{}/{}.txt'.format(userfriend,user), 'a', newline='')
         #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
-        file2.write("{}: ".format(user)+msg+"\n")
+        file2.write("\n{}: ".format(user)+msg+"\n")
         file2.close()
-            
-    def WriteToLogSelf(self,user,msg,userfriend):
-        with open('UserLogs/{}/{}.txt'.format(user,user), 'a', newline='') as f:
-            print("user: {}".format(user))
-            print("msg: {}".format(msg))
-            f.write("{}: ".format(userfriend)+msg+"\n")
         
     def ReadLog(self,user,userfriend,):
         text = ""
