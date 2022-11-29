@@ -93,33 +93,38 @@ class VerifyThread(threading.Thread):
                     #self.conn.close()
                 if self.Data_Check == "UserAddToGroup":
                     self.AddUserToGroup()
+                    
     def AddUserToGroup(self):
+        Username = self.Data_User
         GroupName = self.Data_Pass
         UserToAdd = self.Data_UserAddToGroup 
         UsersInGroup = []
         global LoginName
         
-        #with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"r", newline='') as f:
-        open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a")
-        with open("UserGroups/{}/{}.csv".format(LoginName,GroupName), 'r') as f:
-                csv_reader = csv.reader(f, delimiter=',')
-                for line in csv_reader:
-                    cunt = line
-                    print("What is cunt?:",cunt)    
-                    UsersInGroup.append(cunt)
-                    print("What is UsersInGroup?:",UsersInGroup)
-                if UserToAdd in UsersInGroup:
-                    self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(LoginName)))
-                else:
-                    print("Adding to grouplist!")
-                    with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
-                        csv_writer = csv.writer(f)
-                        csv_writer.writerow([UserToAdd])
-                        self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(LoginName)))
-                    
+        print("What is Username?:",Username)
+        print("What is GroupName?:",GroupName)
+        print("What is UserToAdd?:",UserToAdd)
+        
+        with open("UserGroups/{}/{}.csv".format(Username,GroupName), 'r', newline='') as f:
+            csv_reader = csv.reader(f, delimiter=',')
+            for lineGroup in csv_reader:
+                cunt = ''.join(lineGroup)  
+                UsersInGroup.append(cunt)
+        print("UsersInGroup:",UsersInGroup) 
+     
+        if UserToAdd not in UsersInGroup:
+                print("Adding user to groupchat!")
+                with open("UserGroups/{}/{}.csv".format(Username,GroupName),"a", newline='') as f:
+                    csv_writer = csv.writer(f)
+                    csv_writer.writerow([UserToAdd])
+                    self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(Username)))   
+        if UserToAdd in UsersInGroup:
+                print("Trying to add the same user!")
+                self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(Username)))
+                
+
     def CreateGroup(self):
         GroupName = self.Data_Pass
-        UserToAdd = self.Data_UserAddToGroup 
         global LoginName
         
         os.makedirs("UserGroups",exist_ok=True) 
@@ -127,17 +132,15 @@ class VerifyThread(threading.Thread):
         
         GroupExist = os.path.exists("UserGroups/{}/{}.csv".format(LoginName,GroupName))
         if GroupExist == False:
+            #open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='')
             with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
                 csv_writer = csv.writer(f)
-                csv_writer.writerow([UserToAdd])
-                print("GROUP CREATED!")
-                self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
+                csv_writer.writerow(["USERS:"])       
+            print("GROUP CREATED!")
+            self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
         else:
             self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))
-        
-        
-            
-        
+         
     def Add_User(self):
         # Checks Users CSV for logged users
         # If trying to add user exits add user to current users friendlist
@@ -316,8 +319,38 @@ class LoadDataThread(threading.Thread):
                 print("UserFriendList: {}".format(UserFriendList))
             LoadUsersData = pickle.dumps(UserFriendList)
             self.conn.send(LoadUsersData)
+            
     def LoadingGroups(self):
-        print()
+        Username = self.Data_LoginName
+        GroupName = self.Data_GroupName
+        UserGroupList = []
+        
+        print("Username:",Username)
+        print("GroupName:",GroupName)
+        
+        dir_path = "UserGroups/{}".format(Username)
+        
+        # Iterate directory
+        for path in os.listdir(dir_path):
+            # check if current path is a file
+            if os.path.isfile(os.path.join(dir_path, path)):
+                UserGroupList.append(path)
+                UserGroupList = [x.split('.')[0] for x in UserGroupList]
+        print(UserGroupList)
+        
+        test = [x.split('.')[0] for x in UserGroupList]
+        print("what is test?:", test)
+        
+        #with open("UserGroups/{}/{}.csv".format(Username,GroupName), 'r', newline='') as f:
+        #    csv_reader = csv.reader(f, delimiter=',')
+        #    for lineGroup in csv_reader:
+        #        cunt = ''.join(lineGroup)  
+        #        UserGroupList.append(cunt)
+        #    print("UserGroupList:",UserGroupList)
+        #UserGroupList.remove("USERS:")
+        LoadUserGroupData = pickle.dumps(UserGroupList)
+        self.conn.send(LoadUserGroupData)
+        
 
 class ClientThread(threading.Thread):
     def __init__(self,clientAddress,clientsocket,cc,uu,ii,pi,hi):

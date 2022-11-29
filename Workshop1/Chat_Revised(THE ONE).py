@@ -415,6 +415,7 @@ class Page_Chat(tk.Frame):
         
         self.framegroup3 = tk.Listbox(self.framegroup, bg="yellow",highlightbackground="green", highlightthickness=4)
         self.framegroup3.pack(side=tk.TOP,expand=False)
+        self.LoadGroups()
         
     def CreateGroup(self):
         self.Add_UserGroup_Frame = tk.Toplevel(root)
@@ -483,11 +484,14 @@ class Page_Chat(tk.Frame):
         if self.UsernameAddToGroup.get() not in self.dataLoaded1:
             print("User not in friendlist!")
             #self.AddUsernameToGroup_entry.insert(0,"User not in friendlist!")
-            self.usernameGroup_tryadd_label.config(text="User not in friendlist!", fg="red", font=('arial',10,'bold'))
+            if self.UsernameAddToGroup.get() == stupidusername:
+                self.usernameGroup_tryadd_label.config(text="You are already a part of the chat!", fg="red", font=('arial',10,'bold'))
+            else:
+                self.usernameGroup_tryadd_label.config(text="User not in friendlist!", fg="red", font=('arial',10,'bold'))
         if self.UsernameAddToGroup.get() in self.dataLoaded1:
             print("User in friendlist!")
             #self.AddUsernameToGroup_entry.insert(0,"User is in friendlist!")
-            self.usernameGroup_tryadd_label.config(text="User in friendlist!", fg="green", font=('arial',10,'bold'))
+            ###self.usernameGroup_tryadd_label.config(text="User in friendlist!", fg="green", font=('arial',10,'bold'))
             self.seY = socket(AF_INET,SOCK_STREAM)
             #self.seX.connect((SERVER_IP, VERIFY_PORT))
             self.seY.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -506,24 +510,24 @@ class Page_Chat(tk.Frame):
             print("From Server2: {}".format(datax))
             print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
 
-            if datax[0] == "GROUP CREATED":
-                print("GROUP CREATED")
-                #self.usernameGroup_tryadd_label.config(text="Group created!")
+            if datax[0] == "USER ADDED IN GROUPCHAT":
+                print("USER ADDED IN GROUPCHAT")
+                self.usernameGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
                 self.Add_UserGroup_Frame.withdraw()
                 #self.removeUsers()
                 #self.LoadUserFriends()
-                self.seX.close()
-            if datax[0] == "GROUP ALREADY EXISTS":
-                print("GROUP ALREADY EXISTS")
-                self.usernameGroup_tryadd_label.config(text="Group already exists!", fg="red", font=('arial',10,'bold'))
-                self.seX.close()
-      
+                self.seY.close()
+            if datax[0] == "USER ALREADY IN GROUPCHAT":
+                print("USER ALREADY IN GROUPCHAT")
+                self.usernameGroup_tryadd_label.config(text="User already in groupchat!", fg="red", font=('arial',10,'bold'))
+                self.seY.close()
+    def removeGroups(self):
+        for widget in self.framegroup3.winfo_children():
+            print("widgets: {}".format(widget))
+            if isinstance(widget,tk.Button):
+                widget.destroy() 
+                
     def addUserGroup(self):
-        # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
-        
-        #self.GroupNameAddGroup = tk.StringVar()
-        #self.UsernameAddToGroup = tk.StringVar()
-        
         if not self.GroupNameAddGroup.get() :
             self.usernameGroup_tryadd_label.config(text="Group name is missing!", fg="red", font=('arial',10,'bold'))
         
@@ -548,8 +552,10 @@ class Page_Chat(tk.Frame):
 
             if datax[0] == "GROUP CREATED":
                 print("GROUP CREATED")
-                #self.usernameGroup_tryadd_label.config(text="Group created!")
-                self.Add_UserGroup_Frame.withdraw()
+                self.usernameGroup_tryadd_label.config(text="Group created!", fg="green", font=('arial',10,'bold'))
+                self.removeGroups()
+                self.LoadGroups()
+                #####self.Add_UserGroup_Frame.withdraw()
                 #self.removeUsers()
                 #self.LoadUserFriends()
                 self.seX.close()
@@ -558,15 +564,6 @@ class Page_Chat(tk.Frame):
                 self.usernameGroup_tryadd_label.config(text="Group already exists!", fg="red", font=('arial',10,'bold'))
                 self.seX.close()
             
-        """
-        if datax[0] == "TRIED TO ADD YOURSELF!":
-            print("TRIED TO ADD YOURSELF!")
-            self.username_tryadd_label.config(text="Tried to add yourself!", fg="red", font=('arial',10,'bold'))
-            self.seX.close()
-        if datax[0] == "USER DOES NOT EXIST!":
-            self.username_tryadd_label.config(text="User does not exist!", fg="red", font=('arial',10,'bold'))
-            self.seX.close()
-        """
     
     def LoadGroups(self):
         # When logged in, connect to server and load USER_DATA into chat menu window
@@ -574,7 +571,9 @@ class Page_Chat(tk.Frame):
         
         self.LoadSocket = socket(AF_INET,SOCK_STREAM)
         self.LoadSocket.connect((SERVER_IP, LOAD_USER_PORT))
-        self.data_string = pickle.dumps([stupidusername,"Load_Groups"])
+        
+        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+        self.data_string = pickle.dumps(["","",stupidusername,"Load_Groups"])
         self.LoadSocket.send(self.data_string)
         
         self.dataLoaded2 = self.LoadSocket.recv(BUFFER_SIZE)
@@ -585,7 +584,7 @@ class Page_Chat(tk.Frame):
         self.LoadedGroupLabels = []
         
         for x in self.dataLoaded2:
-            self.LoadedGroupLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded2[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded2[count]:self.active_chat(name,self.LoadedGroupLabel))
+            self.LoadedGroupLabel = tk.Button(self.framegroup3,text="{}".format(self.dataLoaded2[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded2[count]:self.OpenGroupChat(self.LoadedGroupLabel))
             
             name = self.dataLoaded2[count]
             print("This is name: {}".format(name))
@@ -594,6 +593,58 @@ class Page_Chat(tk.Frame):
             self.LoadedGroupLabels.append(self.LoadedGroupLabel)
             count += 1            
     
+    def OpenGroupChat(self,friend): # SKAL RETTES SÅ DEN ÅBNER GRUPPECHAT!
+        global userfriend
+        userfriend = friend
+            
+        print("\nwhat is friend name: {}".format(friend))
+        print("socketlogin status: {}".format(self.socketlogin))
+        print("socketchat status: {}".format(self.socketchat))
+        
+        self.tkraise()
+        
+        self.ChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
+        self.ChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
+        self.userchatLabel = tk.Label(self.ChatWindowUserFrame,text="{}'s Chat".format(friend),bg="magenta", fg="black",font=('arial',14,'bold'), borderwidth=1)
+        self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)  
+        
+        self.ChatTestFrame = tk.Frame(self.ChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=340,width=800)
+        self.ChatTestFrame.pack(side=tk.TOP)
+        self.ChatTestFrame.pack_propagate(0)
+        
+          
+        #self.chat_box = tk.Text(self.ChatWindowUserFrame, height=25)
+        self.chat_box = tk.Text(self.ChatTestFrame, wrap = tk.WORD)
+        self.chat_box.configure(state="disabled")
+        self.chat_box.pack(fill='both',expand=True)
+        self.chat_box.pack_propagate(0)
+        
+        self.stored_logs = []
+        self.ReadLogs()
+        self.stored_logs.remove("STOP NU FOR HELVEDE")
+        #print("logs: ", logs)
+        self.chat_box.configure(state="normal")
+        #self.chat_box.insert("end","\n"+logs) ORIGINAL
+        for i in self.stored_logs:
+            self.chat_box.insert("end",i)
+        self.chat_box.configure(state="disabled")
+        self.chat_box.see("end")
+        
+        scrollbar = tk.Scrollbar(self.chat_box,command=self.chat_box.yview)
+        scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
+        self.chat_box['yscrollcommand'] = scrollbar.set
+        
+        self.input_field = tk.Entry(self.ChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
+        self.input_field.pack(side=tk.TOP,pady=1)
+        self.input_field.bind("<Return>",self.key_sendmsg)
+        self.input_field.focus()
+        
+        self.thread1.set(self.chat_box,self.input_field)
+        self.thread2.set(self.chat_box)
+        
+        self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
+        self.button['command'] = self.send_message_button
+        self.button.pack()
     
     def key_pressed(self, event):
         #self.AddShit()
@@ -852,7 +903,7 @@ class SendData():
     def __init__(self,tcp_socket, user):
         self.ds=tcp_socket
         self.uu=user
-    def send(self):
+    def send(self): # LAV EN "KOPI" DER SENDER TIL GRUPPECHATS!
             global userfriend
             send_data = self.input.get()
             print("send data: {}".format(send_data))
