@@ -295,7 +295,7 @@ class Page_Chat(tk.Frame):
                                    highlightthickness=6,
                                    bg="blue",height=580,width=750)
         self.frame_main.pack(fill='both',expand=True)
-        #self.frame_main.propagate(0)
+        self.frame_main.propagate(0)
         
         global stupidusername
         stupidusername1 = stupidusername
@@ -410,7 +410,7 @@ class Page_Chat(tk.Frame):
         self.FriendList_Label = tk.Label(self.framegroup,text="Group List", bg="green", fg="white",font=('arial',10,'bold'), borderwidth=1)
         self.FriendList_Label.pack(side=tk.TOP,fill='both',expand=True,pady=15)
         
-        self.Add2Group = tk.Button(self.framegroup, text="Create Group",command=lambda : [self.CreateGroup()], bg="#211A52", fg = "white")
+        self.Add2Group = tk.Button(self.framegroup, text="Create Group or Add User",command=lambda : [self.CreateGroup()], bg="#211A52", fg = "white")
         self.Add2Group.pack(side=tk.TOP,expand=False)
         
         self.framegroup3 = tk.Listbox(self.framegroup, bg="yellow",highlightbackground="green", highlightthickness=4)
@@ -537,7 +537,7 @@ class Page_Chat(tk.Frame):
             UserAddToGroup = self.UsernameAddToGroup.get()
             # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
             #self.data_string = pickle.dumps([GroupNameAdd,UserAddToGroup,stupidusername, "UserAddGroup"])
-            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddGroup"])
+            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddGroup",""])
             self.seX.send(self.data_string)
             datax = self.seX.recv(BUFFER_SIZE)
             datax = pickle.loads(datax)
