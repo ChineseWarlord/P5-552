@@ -467,6 +467,7 @@ class Page_Chat(tk.Frame):
         self.AddUsernameToGroup_entry = tk.Entry(self.frameAddUsers, width=35,textvariable=self.UsernameAddToGroup)
         self.AddUsernameToGroup_entry.pack(side=tk.RIGHT)
         self.AddUsernameToGroup_entry.bind("<Return>","self.key_pressed_add_to_group")
+        
         self.Add_User_ButtonGroup = tk.Button(self.frameaddGroup_User_BUT, text="Create group",command=lambda : [self.addUserGroup()], bg="#211A52", fg = "white")
         self.Add_User_ButtonGroup.pack(side=tk.LEFT)
         self.usernameGroup_tryadd_label.pack(side=tk.LEFT,padx=5, pady=5)
@@ -490,7 +491,16 @@ class Page_Chat(tk.Frame):
         if not self.GroupNameAddGroup.get() or not self.UsernameAddToGroup.get():
             self.usernameGroup_tryadd_label.config(text="Group name or Username is missing!", fg="red", font=('arial',10,'bold'))
         
-        if self.GroupNameAddGroup.get() and self.UsernameAddToGroup.get():
+        if self.UsernameAddToGroup.get() not in self.dataLoaded1:
+            print("User not in friendlist!")
+            #self.AddUsernameToGroup_entry.insert(0,"User not in friendlist!")
+            #self.usernameGroup_tryadd_label.config(text="User not in friendlist!", fg="red", font=('arial',10,'bold'))
+        if self.UsernameAddToGroup.get() in self.dataLoaded1:
+            print("User in friendlist!")
+            #self.AddUsernameToGroup_entry.insert(0,"User is in friendlist!")
+            #self.usernameGroup_tryadd_label.config(text="User in friendlist!", fg="green", font=('arial',10,'bold'))
+        
+        if self.GroupNameAddGroup.get() and self.UsernameAddToGroup.get() in self.dataLoaded1:
             self.seX = socket(AF_INET,SOCK_STREAM)
             #self.seX.connect((SERVER_IP, VERIFY_PORT))
             self.seX.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -540,19 +550,19 @@ class Page_Chat(tk.Frame):
         self.data_string = pickle.dumps([stupidusername,"Load_Groups"])
         self.LoadSocket.send(self.data_string)
         
-        self.dataLoaded = self.LoadSocket.recv(BUFFER_SIZE)
-        self.dataLoaded = pickle.loads(self.dataLoaded)
+        self.dataLoaded2 = self.LoadSocket.recv(BUFFER_SIZE)
+        self.dataLoaded2 = pickle.loads(self.dataLoaded2)
         global UserDataLoaded
-        print("Users loaded from server: {}".format(self.dataLoaded))
+        print("Users loaded from server: {}".format(self.dataLoaded2))
         count = 0
         self.LoadedGroupLabels = []
         
-        for x in self.dataLoaded:
-            self.LoadedGroupLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded[count]:self.active_chat(name,self.LoadedGroupLabel))
+        for x in self.dataLoaded2:
+            self.LoadedGroupLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded2[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded2[count]:self.active_chat(name,self.LoadedGroupLabel))
             
-            name = self.dataLoaded[count]
+            name = self.dataLoaded2[count]
             print("This is name: {}".format(name))
-            print("Group name: {}".format(self.dataLoaded[count]))  
+            print("Group name: {}".format(self.dataLoaded2[count]))  
             self.LoadedGroupLabel.pack(side=tk.TOP,expand=False,pady=3)
             self.LoadedGroupLabels.append(self.LoadedGroupLabel)
             count += 1            
@@ -652,15 +662,15 @@ class Page_Chat(tk.Frame):
         self.data_string = pickle.dumps(["","",stupidusername,"Load_Users"])
         self.LoadSocket.send(self.data_string)
         
-        self.dataLoaded = self.LoadSocket.recv(BUFFER_SIZE)
-        self.dataLoaded = pickle.loads(self.dataLoaded)
+        self.dataLoaded1 = self.LoadSocket.recv(BUFFER_SIZE)
+        self.dataLoaded1 = pickle.loads(self.dataLoaded1)
         global UserDataLoaded
-        print("Users loaded from server: {}".format(self.dataLoaded))
+        print("Users loaded from server: {}".format(self.dataLoaded1))
         count = 0
         self.LoadedUserLabels = []
         
         
-        for x in self.dataLoaded:
+        for x in self.dataLoaded1:
             #self.LoadedUserLabel = tk.Label(self.frame2,text="{}".format(self.dataLoaded[count]),cursor="hand2", 
             #                       bg="green", fg="white",font=('arial',10,'bold'), borderwidth=1)
             
@@ -668,11 +678,11 @@ class Page_Chat(tk.Frame):
             #self.LoadedUserLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1, anchor="center", command=lambda name=self.dataLoaded[count]:self.OpenUserChat(name))
             
             # New function!!!:
-            self.LoadedUserLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded[count]:self.active_window(name,self.LoadedUserLabel))
+            self.LoadedUserLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded1[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded1[count]:self.active_window(name,self.LoadedUserLabel))
             
-            name = self.dataLoaded[count]
+            name = self.dataLoaded1[count]
             print("This is name: {}".format(name))
-            print("Username of friends: {}".format(self.dataLoaded[count]))  
+            print("Username of friends: {}".format(self.dataLoaded1[count]))  
             self.LoadedUserLabel.pack(side=tk.TOP,expand=False,pady=3)
             self.LoadedUserLabels.append(self.LoadedUserLabel)
             
