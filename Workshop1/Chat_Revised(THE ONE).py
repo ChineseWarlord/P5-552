@@ -70,21 +70,16 @@ class Page_Login(tk.Frame):
         
         print("PAGE_LOGIN Am I printing this? 1")
         
-        self.frame_master = tk.Frame(master=self, 
-                               borderwidth=1, 
-                               background="blue",
-                               highlightthickness=5,)
+        self.frame_master = tk.Frame(master=self)
         self.frame_master.pack(side=tk.TOP, fill='both',expand=True)
         
-        self.frame1 = tk.Frame(self.frame_master, 
-                               borderwidth=1,
-                               highlightthickness=5,)
+        self.frame1 = tk.Frame(self.frame_master)
         self.frame1.pack(side=tk.TOP,expand=True)
         self.title_label = tk.Label(self.frame1, text="Awesome Chat Program!", font=('Arial',18,'bold'))
         self.title_label.pack(side=tk.TOP,expand=False)
         
 
-        self.frame2 = tk.Frame(self.frame1, borderwidth=10, background="red")
+        self.frame2 = tk.Frame(self.frame1)
         #self.frame2 = tk.Frame(root, borderwidth=10, background="red")
         self.frame2.pack(side=tk.TOP,expand=False)
         self.username_label = tk.Label(self.frame2,text="Username:")
@@ -94,7 +89,7 @@ class Page_Login(tk.Frame):
         self.username_entry_login.bind("<Return>",self.key_pressed)
         self.username_entry_login.focus()
 
-        self.frame3 = tk.Frame(self.frame1, borderwidth=10, background="black")
+        self.frame3 = tk.Frame(self.frame1, borderwidth=10)
         #self.frame3 = tk.Frame(root, borderwidth=10, background="black")
         self.frame3.pack(side=tk.TOP,expand=False)
         self.pwd_label = tk.Label(self.frame3,text="Password: ")
@@ -103,7 +98,7 @@ class Page_Login(tk.Frame):
         self.pwd_entry_login.pack(side=tk.TOP,fill='both',expand=True)
         self.pwd_entry_login.bind("<Return>",self.key_pressed)
         
-        self.frame4 = tk.Frame(self.frame1, borderwidth=10, background="green")
+        self.frame4 = tk.Frame(self.frame1, borderwidth=10)
         #self.frame4 = tk.Frame(root, borderwidth=10, background="green")
         self.frame4.pack(side=tk.TOP,expand=False)
         
@@ -205,12 +200,12 @@ class Page_UserRegister(tk.Frame):
         self.Username = tk.StringVar()
         self.Password = tk.StringVar()
         
-        self.frame1 = tk.Frame(master=self, borderwidth=10, bg="blue")
+        self.frame1 = tk.Frame(master=self)
         self.frame1.pack()
         self.register_title_label = tk.Label(self.frame1, text="User Registration")
         self.register_title_label.pack(side=tk.LEFT)
 
-        self.frame2 = tk.Frame(master=self, borderwidth=10, bg="red")
+        self.frame2 = tk.Frame(master=self, borderwidth=10)
         self.frame2.pack()
         self.username_label = tk.Label(self.frame2,text="Username:")
         self.username_label.pack(side=tk.LEFT)
@@ -219,7 +214,7 @@ class Page_UserRegister(tk.Frame):
         self.username_entry.bind("<Return>",self.key_pressed)
         self.username_entry.focus()
 
-        self.frame3 = tk.Frame(master=self, borderwidth=10, bg="green")
+        self.frame3 = tk.Frame(master=self)
         self.frame3.pack()
         self.pwd_label = tk.Label(self.frame3,text="Password: ")
         self.pwd_label.pack(side=tk.LEFT)
@@ -227,7 +222,7 @@ class Page_UserRegister(tk.Frame):
         self.pwd_entry.pack()
         self.pwd_entry.bind("<Return>",self.key_pressed)
         
-        self.frame4 = tk.Frame(master=self, borderwidth=10,bg="yellow")
+        self.frame4 = tk.Frame(master=self)
         self.frame4.pack()
         self.register_button = tk.Button(self.frame4, text="Register now",command=lambda:[self.register_user(), self.clear_entry()], bg="#211A52", fg = "white")
         self.register_button.pack(side=tk.LEFT)
@@ -445,13 +440,11 @@ class Page_Chat(tk.Frame):
         self.frameaddGroup_User_BUT = tk.Frame(self.frameaddGroup, borderwidth=5, bg="Green")
         self.frameaddGroup_User_BUT.pack()
         
-        
-        
-        
-        self.usernameGroup_tryadd_label = tk.Label(self.frameaddGroup_User_TRY,text="Create a new group")
+        self.usernameGroup_tryadd_label = tk.Label(self.frameaddGroup_User_TRY,text="Create a new group or Add user to group")
+        self.usernameGroup_tryadd_label.pack(side=tk.TOP,padx=5, pady=5)
+        self.usernameGroup_tryadd_label2 = tk.Label(self.frameaddGroup_User_TRY,text="To create group: Enter group name\nTo add user to group: Enter group name and User from friendlist")
+        self.usernameGroup_tryadd_label2.pack(side=tk.TOP,padx=5, pady=10)
     
-        
-        
         self.usernameGroup_label = tk.Label(self.frameaddGroup_User,text="Group name:")
         self.usernameGroup_label.pack(side=tk.LEFT,padx=5, pady=5)
         self.usernameaddGroup_entry = tk.Entry(self.frameaddGroup_User, width=35,textvariable=self.GroupNameAddGroup)
@@ -470,7 +463,10 @@ class Page_Chat(tk.Frame):
         
         self.Add_User_ButtonGroup = tk.Button(self.frameaddGroup_User_BUT, text="Create group",command=lambda : [self.addUserGroup()], bg="#211A52", fg = "white")
         self.Add_User_ButtonGroup.pack(side=tk.LEFT)
-        self.usernameGroup_tryadd_label.pack(side=tk.LEFT,padx=5, pady=5)
+        
+        self.Add_User_ToGroupButton = tk.Button(self.frameaddGroup_User_BUT, text="Add to group",command=lambda : [self.addUserToGroup()], bg="#211A52", fg = "white")
+        self.Add_User_ToGroupButton.pack(side=tk.LEFT)
+        
         self.Add_User_EXIT_ButtonGroup = tk.Button(self.frameaddGroup_User_BUT, text="EXIT",command=lambda : [self.Add_UserGroup_Frame.withdraw(),self.clear_entry_Group()], bg="#211A52", fg = "white")
         self.Add_User_EXIT_ButtonGroup.pack(side=tk.RIGHT)
             
@@ -481,26 +477,57 @@ class Page_Chat(tk.Frame):
         self.addUserGroup()
         self.usernameaddGroup_entry.delete(0, 'end')
         #self.Add_UserGroup_Frame.withdraw()
-        
+    
+    def addUserToGroup(self):
+         
+        if self.UsernameAddToGroup.get() not in self.dataLoaded1:
+            print("User not in friendlist!")
+            #self.AddUsernameToGroup_entry.insert(0,"User not in friendlist!")
+            self.usernameGroup_tryadd_label.config(text="User not in friendlist!", fg="red", font=('arial',10,'bold'))
+        if self.UsernameAddToGroup.get() in self.dataLoaded1:
+            print("User in friendlist!")
+            #self.AddUsernameToGroup_entry.insert(0,"User is in friendlist!")
+            self.usernameGroup_tryadd_label.config(text="User in friendlist!", fg="green", font=('arial',10,'bold'))
+            self.seY = socket(AF_INET,SOCK_STREAM)
+            #self.seX.connect((SERVER_IP, VERIFY_PORT))
+            self.seY.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.seY.connect((SERVER_IP, VERIFY_PORT))
+
+            GroupNameAdd = self.GroupNameAddGroup.get()
+            UserAddToGroup = self.UsernameAddToGroup.get()
+            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+            #self.data_string = pickle.dumps([GroupNameAdd,UserAddToGroup,stupidusername, "UserAddGroup"])
+            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddToGroup", UserAddToGroup])
+            self.seY.send(self.data_string)
+            datax = self.seY.recv(BUFFER_SIZE)
+            datax = pickle.loads(datax)
+            print("From Server: {}".format(datax))
+            datax = datax.split('#')
+            print("From Server2: {}".format(datax))
+            print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
+
+            if datax[0] == "GROUP CREATED":
+                print("GROUP CREATED")
+                #self.usernameGroup_tryadd_label.config(text="Group created!")
+                self.Add_UserGroup_Frame.withdraw()
+                #self.removeUsers()
+                #self.LoadUserFriends()
+                self.seX.close()
+            if datax[0] == "GROUP ALREADY EXISTS":
+                print("GROUP ALREADY EXISTS")
+                self.usernameGroup_tryadd_label.config(text="Group already exists!", fg="red", font=('arial',10,'bold'))
+                self.seX.close()
+      
     def addUserGroup(self):
         # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
         
         #self.GroupNameAddGroup = tk.StringVar()
         #self.UsernameAddToGroup = tk.StringVar()
         
-        if not self.GroupNameAddGroup.get() or not self.UsernameAddToGroup.get():
-            self.usernameGroup_tryadd_label.config(text="Group name or Username is missing!", fg="red", font=('arial',10,'bold'))
+        if not self.GroupNameAddGroup.get() :
+            self.usernameGroup_tryadd_label.config(text="Group name is missing!", fg="red", font=('arial',10,'bold'))
         
-        if self.UsernameAddToGroup.get() not in self.dataLoaded1:
-            print("User not in friendlist!")
-            #self.AddUsernameToGroup_entry.insert(0,"User not in friendlist!")
-            #self.usernameGroup_tryadd_label.config(text="User not in friendlist!", fg="red", font=('arial',10,'bold'))
-        if self.UsernameAddToGroup.get() in self.dataLoaded1:
-            print("User in friendlist!")
-            #self.AddUsernameToGroup_entry.insert(0,"User is in friendlist!")
-            #self.usernameGroup_tryadd_label.config(text="User in friendlist!", fg="green", font=('arial',10,'bold'))
-        
-        if self.GroupNameAddGroup.get() and self.UsernameAddToGroup.get() in self.dataLoaded1:
+        if self.GroupNameAddGroup.get():
             self.seX = socket(AF_INET,SOCK_STREAM)
             #self.seX.connect((SERVER_IP, VERIFY_PORT))
             self.seX.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
@@ -510,7 +537,7 @@ class Page_Chat(tk.Frame):
             UserAddToGroup = self.UsernameAddToGroup.get()
             # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
             #self.data_string = pickle.dumps([GroupNameAdd,UserAddToGroup,stupidusername, "UserAddGroup"])
-            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddGroup",UserAddToGroup])
+            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddGroup"])
             self.seX.send(self.data_string)
             datax = self.seX.recv(BUFFER_SIZE)
             datax = pickle.loads(datax)
@@ -880,7 +907,7 @@ if __name__=="__main__":
     root = tk.Tk()
     #root.withdraw()
     #root = tk.Toplevel()
-    root.geometry("700x550")
+    #root.geometry("300x250")
     root.title("Awesome Chat Program!")
 
    

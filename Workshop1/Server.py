@@ -91,6 +91,31 @@ class VerifyThread(threading.Thread):
                 if self.Data_Check == "UserAddGroup":
                     self.CreateGroup()
                     #self.conn.close()
+                if self.Data_Check == "UserAddToGroup":
+                    self.AddUserToGroup()
+    def AddUserToGroup(self):
+        GroupName = self.Data_Pass
+        UserToAdd = self.Data_UserAddToGroup 
+        UsersInGroup = []
+        global LoginName
+        
+        #with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"r", newline='') as f:
+        open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a")
+        with open("UserGroups/{}/{}.csv".format(LoginName,GroupName), 'r') as f:
+                csv_reader = csv.reader(f, delimiter=',')
+                for line in csv_reader:
+                    cunt = line
+                    print("What is cunt?:",cunt)    
+                    UsersInGroup.append(cunt)
+                    print("What is UsersInGroup?:",UsersInGroup)
+                if UserToAdd in UsersInGroup:
+                    self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(LoginName)))
+                else:
+                    print("Adding to grouplist!")
+                    with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
+                        csv_writer = csv.writer(f)
+                        csv_writer.writerow([UserToAdd])
+                        self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(LoginName)))
                     
     def CreateGroup(self):
         GroupName = self.Data_Pass
@@ -102,23 +127,14 @@ class VerifyThread(threading.Thread):
         
         GroupExist = os.path.exists("UserGroups/{}/{}.csv".format(LoginName,GroupName))
         if GroupExist == False:
-            open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a")
-            with open("UserGroups/{}/{}.csv".format(LoginName,GroupName), 'r') as f:
-                csv_reader = csv.reader(f, delimiter=',')
-                for line in csv_reader:
-                    cunt = line
-                    print("What is cunt?:",cunt)
             with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerow([UserToAdd])
                 print("GROUP CREATED!")
                 self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
         else:
-            print("Adding to grouplist!")
-            with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
-                csv_writer = csv.writer(f)
-                csv_writer.writerow([UserToAdd])
             self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))
+        
         
             
         
