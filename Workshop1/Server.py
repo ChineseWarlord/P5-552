@@ -374,7 +374,6 @@ class ClientThread(threading.Thread):
         self.userids = ii
         self.portids = pi
         self.porthandles = hi
-        self.testUserSocket = []
         print("\n\n=======================")
         print("self.csocket: {}".format(self.csocket))
         print("self.counter: {}".format(self.counter))
@@ -441,12 +440,15 @@ class ClientThread(threading.Thread):
                 if len(recv_string) == 0: 
                         print("Closed shit")
                         break  
-                # msg structure: [userlogin, msg, toUser]
+
+                # Data structure: [userlogin, msg, toUser, groupname, keyword]
                 print("\n=============================================")
                 print("What is recv_data: {}".format(recv_data))
                 print("What is recv_data[0]: {}".format(recv_data[0]))
                 print("What is recv_data[1]: {}".format(recv_data[1]))
                 print("What is recv_data[2]: {}".format(recv_data[2]))
+                print("What is recv_data[3]: {}".format(recv_data[3]))
+                print("What is recv_data[4]: {}".format(recv_data[4]))
                 print("=============================================\n")
                 
                 ##############################################################
@@ -481,12 +483,20 @@ class ClientThread(threading.Thread):
                     break
                 else:
                     for x in UserSockets:
-                    
-                        if x[1] == recv_data[2]:
-                            x[0].send(recv_string)
-                        if x[1] != recv_data[2]:
-                            x[0].send(recv_string)
-                            logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                        # Data structure: [userlogin, msg, toUser, groupname, keyword]
+                        if recv_data[4] == "SINGLE":
+                            if x[1] == recv_data[2]:
+                                x[0].send(recv_string)
+                            if x[1] != recv_data[2]:
+                                x[0].send(recv_string)
+                                logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                        if recv_data[4] == "GROUP":
+                            for y in recv_data[2]:
+                                if x[1] == y:
+                                    x[0].send(recv_string)
+                                if x[1] != y:
+                                    x[0].send(recv_string)
+                                    logs.WriteToLog(recv_data[0],recv_data[1],recv_data[3])
                             
                             
         else:

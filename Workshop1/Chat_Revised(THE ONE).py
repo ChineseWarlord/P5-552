@@ -475,16 +475,21 @@ class Page_Chat(tk.Frame):
         self.usernameAddToGroup_label.pack(side=tk.LEFT,padx=5, pady=5)
         self.AddUsernameToGroup_entry = tk.Entry(self.frameAddUsers, width=35,textvariable=self.UsernameAddToGroup)
         self.AddUsernameToGroup_entry.pack(side=tk.RIGHT)
-        self.AddUsernameToGroup_entry.bind("<Return>","self.key_pressed_add_to_group")
+        self.AddUsernameToGroup_entry.bind("<Return>",self.key_pressed_addtogroup)
         
         self.Add_User_ButtonGroup = tk.Button(self.frameaddGroup_User_BUT, text="Create group",command=lambda : [self.addUserGroup()], bg="#211A52", fg = "white")
         self.Add_User_ButtonGroup.pack(side=tk.LEFT)
         
-        self.Add_User_ToGroupButton = tk.Button(self.frameaddGroup_User_BUT, text="Add to group",command=lambda : [self.addUserToGroup()], bg="#211A52", fg = "white")
+        self.Add_User_ToGroupButton = tk.Button(self.frameaddGroup_User_BUT, text="Add to group",command=lambda : [self.addUserToGroup(),self.key_pressed_addtogroup()], bg="#211A52", fg = "white")
         self.Add_User_ToGroupButton.pack(side=tk.LEFT)
+        
         
         self.Add_User_EXIT_ButtonGroup = tk.Button(self.frameaddGroup_User_BUT, text="EXIT",command=lambda : [self.Add_UserGroup_Frame.withdraw(),self.clear_entry_Group()], bg="#211A52", fg = "white")
         self.Add_User_EXIT_ButtonGroup.pack(side=tk.RIGHT)
+    
+    def key_pressed_addtogroup(self, event):
+        self.addUserToGroup()
+        self.AddUsernameToGroup_entry.delete(0, 'end')
             
     def clear_entry_Group(self):
         self.usernameaddGroup_entry.delete(0, 'end')   
@@ -528,10 +533,12 @@ class Page_Chat(tk.Frame):
             if datax[0] == "USER ALREADY IN GROUPCHAT":
                 print("USER ALREADY IN GROUPCHAT")
                 self.usernameGroup_tryadd_label.config(text="User already in groupchat!", fg="red", font=('arial',10,'bold'))
+                self.AddUsernameToGroup_entry.delete(0,'end')
                 self.seY.close()
             else:
                 print("USER ADDED IN GROUPCHAT")
                 self.usernameGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
+                self.AddUsernameToGroup_entry.delete(0,'end')
                 self.seY.close()
                 
     def removeGroups(self):
@@ -625,7 +632,8 @@ class Page_Chat(tk.Frame):
             active_window2 = False
             
     def OpenGroupChat(self,group):
-        print("\nwhat is group name: {}".format(group))
+        self.GROUPNAMETOSEND = group
+        print("\nwhat is group name: {}".format(self.GROUPNAMETOSEND))
         print("socketlogin status: {}".format(self.socketlogin))
         print("socketchat status: {}".format(self.socketchat))
         
@@ -633,7 +641,7 @@ class Page_Chat(tk.Frame):
         
         self.GroupChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
         self.GroupChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
-        self.userchatLabel = tk.Label(self.GroupChatWindowUserFrame,text="{}'s Chat".format(group),bg="magenta", fg="black",font=('arial',14,'bold'), borderwidth=1)
+        self.userchatLabel = tk.Label(self.GroupChatWindowUserFrame,text="{}'s Chat".format(self.GROUPNAMETOSEND),bg="magenta", fg="black",font=('arial',14,'bold'), borderwidth=1)
         self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)  
         
         self.GroupChatTestFrame = tk.Frame(self.GroupChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=340,width=800)
@@ -666,7 +674,7 @@ class Page_Chat(tk.Frame):
         self.LoadSocket = socket(AF_INET,SOCK_STREAM)
         self.LoadSocket.connect((SERVER_IP, LOAD_USER_PORT))
         # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-        self.data_string = pickle.dumps([group,"",stupidusername,"Load_Group_Users"])
+        self.data_string = pickle.dumps([self.GROUPNAMETOSEND,"",stupidusername,"Load_Group_Users"])
         self.LoadSocket.send(self.data_string)
         global GroupListFriends
         GroupListFriends = self.LoadSocket.recv(BUFFER_SIZE)
@@ -790,13 +798,6 @@ class Page_Chat(tk.Frame):
         
         
         for x in self.dataLoaded1:
-            #self.LoadedUserLabel = tk.Label(self.frame2,text="{}".format(self.dataLoaded[count]),cursor="hand2", 
-            #                       bg="green", fg="white",font=('arial',10,'bold'), borderwidth=1)
-            
-            # Original function!!!:
-            #self.LoadedUserLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1, anchor="center", command=lambda name=self.dataLoaded[count]:self.OpenUserChat(name))
-            
-            # New function!!!:
             self.LoadedUserLabel = tk.Button(self.frame6,text="{}".format(self.dataLoaded1[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded1[count]:self.active_window(name,self.LoadedUserLabel))
             
             name = self.dataLoaded1[count]
@@ -805,10 +806,8 @@ class Page_Chat(tk.Frame):
             self.LoadedUserLabel.pack(side=tk.TOP,expand=False,pady=3)
             self.LoadedUserLabels.append(self.LoadedUserLabel)
             
-            #os.makedirs("UserLogs/{}".format(stupidusername),exist_ok=True)
-            #with open('UserLogs/{}/{}.txt'.format(stupidusername,self.dataLoaded[count]), 'a', newline='') as f:
-            #        print("User log: {} created!".format(self.dataLoaded[count]))
-            count += 1            
+            count += 1
+                      
     def removeUsers(self):
         for widget in self.frame6.winfo_children():
             #print("widgets: {}".format(widget))
@@ -936,7 +935,7 @@ class Page_Chat(tk.Frame):
         self.thread1.send()
         self.input_field.delete(0, 'end')
     def send_message_button_group(self):
-        self.thread1.send_to_group()
+        self.thread1.send_to_group(self.GROUPNAMETOSEND)
         self.input_fieldGroup.delete(0, 'end')
         
     def send_message_enter(self, event):
@@ -954,13 +953,14 @@ class SendData():
     def __init__(self,tcp_socket, user):
         self.ds=tcp_socket
         self.uu=user
-    def send(self): # LAV EN "KOPI" DER SENDER TIL GRUPPECHATS!
+    def send(self):
         global userfriend
         send_data = self.input.get()
         print("send data: {}".format(send_data))
         print(len(send_data))
         if len(send_data) > 1:
-            chat_data=[self.uu,send_data, userfriend]
+            # Data structure: [user, msg, msgtofriend, groupname, keyword]
+            chat_data=[self.uu,send_data, userfriend,"","SINGLE"]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             self.chat.configure(state="normal")
@@ -968,13 +968,14 @@ class SendData():
             self.chat.configure(state="disabled")
             self.chat.see("end") 
                 
-    def send_to_group(self):
+    def send_to_group(self,groupname):
         global GroupListFriends
         send_data = self.input.get()
         print("send data: {}".format(send_data))
         print(len(send_data))
         if len(send_data) > 1:
-            chat_data=[self.uu,send_data, GroupListFriends]
+            # Data structure: [user, msg, msgtofriend, groupname, keyword]
+            chat_data=[self.uu,send_data, GroupListFriends, groupname, "GROUP"]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             self.chat.configure(state="normal")
@@ -1012,7 +1013,6 @@ class ReceiveData(threading.Thread):
                 self.chat.see("end")
                 #logs = PersistentLogs()
                 #logs.WriteToLog(userfriend,msg)
-                print("Received!!!!!!!")
     def set(self,chat_box):
         self.chat = chat_box   
 
@@ -1033,10 +1033,7 @@ if __name__=="__main__":
     
     root = Main_View()
     root.add_page("Page_Login",Page_Login)
-    #root.add_page("Page_UserRegister",Page_UserRegister)
     root.show_frame("Page_Login")
-    
-    
     root.mainloop()
     
     os.system("cls")
