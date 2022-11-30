@@ -122,7 +122,6 @@ class VerifyThread(threading.Thread):
                 print("Trying to add the same user!")
                 self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(Username)))
                 
-
     def CreateGroup(self):
         GroupName = self.Data_Pass
         global LoginName
@@ -490,13 +489,25 @@ class ClientThread(threading.Thread):
                             if x[1] != recv_data[2]:
                                 x[0].send(recv_string)
                                 logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
+                                
                         if recv_data[4] == "GROUP":
                             for y in recv_data[2]:
+                                print("What is y:",y)
+                                print("what is x[1]:",x[1])
                                 if x[1] == y:
+                                    print("========================")
+                                    print("1 My socket:",x[0])
+                                    print("1 what is x[1]:",x[1])
+                                    print("========================")
                                     x[0].send(recv_string)
                                 if x[1] != y:
+                                    print("========================")
+                                    print("2 My socket:",x[0])
+                                    print("2 what is x[1]:",x[1])
+                                    print("========================")
                                     x[0].send(recv_string)
-                                    logs.WriteToLog(recv_data[0],recv_data[1],recv_data[3])
+                            #[loginName,msg,['user1','user2'], PersistentLogName] 
+                            logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
                             
                             
         else:
@@ -551,7 +562,8 @@ class UserLogThread(threading.Thread):
 class PersistentLogs():
     def __init__(self):
         print("Opening logs...")
-        
+    
+    # Data structure WriteToLog: "Userlogs/{}/{}.txt" [loginName,msg, PersistentLogName]    
     def WriteToLog(self,user,msg,name):
         file1 = open('UserLogs/{}/{}.txt'.format(user,name), 'a', newline='')
         #file1.write("YOU: "+msg+"\n") ORIGINAL
@@ -561,16 +573,18 @@ class PersistentLogs():
         #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
         file2.write("\n{}: ".format(user)+msg+"\n")
         file2.close()
-        
-    def WriteToLogGroup(self,user,msg,name):
+    
+    # Data structure WriteToLogGroup: "Userlogs/{}/{}.txt" [loginName,msg,['user1','user2'], PersistentLogName]    
+    def WriteToLogGroup(self,user,msg,broadcast,name):
         file1 = open('UserLogs/{}/{}.txt'.format(user,name), 'a', newline='')
         #file1.write("YOU: "+msg+"\n") ORIGINAL
         file1.write("\nYOU: "+msg+"\n")
         file1.close()
-        file2 = open('UserLogs/{}/{}.txt'.format(name,user), 'a', newline='')
-        #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
-        file2.write("\n{}: ".format(user)+msg+"\n")
-        file2.close()
+        for users in broadcast: 
+            file2 = open('UserLogs/{}/{}.txt'.format(users,name), 'a', newline='')
+            #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
+            file2.write("\n{}: ".format(user)+msg+"\n")
+            file2.close()
         
     def ReadLog(self,user,name):
         text = []

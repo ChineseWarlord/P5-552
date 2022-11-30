@@ -412,7 +412,7 @@ class Page_Chat(tk.Frame):
         for widget in self.frame4.winfo_children():
             if isinstance(widget,tk.Frame):
                 #print("removegroupwindow widgets: {}".format(widget))
-                #widget.destroy()
+                widget.destroy()
                 widget.forget()      
             
     def GroupChat(self):
@@ -689,8 +689,10 @@ class Page_Chat(tk.Frame):
         self.input_fieldGroup.bind("<Return>",self.key_sendmsg_group)
         self.input_fieldGroup.focus()
         
-        self.thread1.set(self.Groupchat_box,self.input_fieldGroup)
-        self.thread2.set(self.Groupchat_box)
+        # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP]
+        # set structure: [chatboxSINGLE, chatboxGROUP, state]
+        self.thread1.set("","", self.Groupchat_box, self.input_fieldGroup)
+        self.thread2.set("", self.Groupchat_box, "GROUP")
         
         self.buttonGroup = ttk.Button(self.GroupChatWindowUserFrame, text='Send')
         self.buttonGroup['command'] = self.send_message_button_group
@@ -817,7 +819,7 @@ class Page_Chat(tk.Frame):
         for widget in self.frame4.winfo_children():
             if isinstance(widget,tk.Frame):
                 #print("removechatwindow widgets: {}".format(widget))
-                #widget.destroy()
+                widget.destroy()
                 widget.forget()
     def active_window(self,name,nameFriend):
         global active_window
@@ -887,8 +889,10 @@ class Page_Chat(tk.Frame):
         self.input_field.bind("<Return>",self.key_sendmsg)
         self.input_field.focus()
         
-        self.thread1.set(self.chat_box,self.input_field)
-        self.thread2.set(self.chat_box)
+        # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP]
+        # set structure: [chatboxSINGLE, chatboxGROUP, state]
+        self.thread1.set(self.chat_box,self.input_field, "","")
+        self.thread2.set(self.chat_box,"","SINGLE")
         
         self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
         self.button['command'] = self.send_message_button
@@ -928,7 +932,7 @@ class Page_Chat(tk.Frame):
         self.input_field.delete(0, 'end')
     def key_sendmsg_group(self, event):
         #self.AddShit()
-        self.send_message_button()           
+        self.send_message_button_group()           
         self.input_fieldGroup.delete(0, 'end')
         
     def send_message_button(self):
@@ -956,7 +960,7 @@ class SendData():
     def send(self):
         global userfriend
         send_data = self.input.get()
-        print("send data: {}".format(send_data))
+        print("SINGLE - send data: {}".format(send_data))
         print(len(send_data))
         if len(send_data) > 1:
             # Data structure: [user, msg, msgtofriend, groupname, keyword]
@@ -970,28 +974,31 @@ class SendData():
                 
     def send_to_group(self,groupname):
         global GroupListFriends
-        send_data = self.input.get()
-        print("send data: {}".format(send_data))
+        send_data = self.input2.get()
+        print("GROUP - send data: {}".format(send_data))
         print(len(send_data))
         if len(send_data) > 1:
             # Data structure: [user, msg, msgtofriend, groupname, keyword]
             chat_data=[self.uu,send_data, GroupListFriends, groupname, "GROUP"]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
-            self.chat.configure(state="normal")
-            self.chat.insert("end","\nYOU: {}\n".format(send_data))
-            self.chat.configure(state="disabled")
-            self.chat.see("end")
+            self.chatgroup.configure(state="normal")
+            self.chatgroup.insert("end","\nYOU: {}\n".format(send_data))
+            self.chatgroup.configure(state="disabled")
+            self.chatgroup.see("end")
                       
-                
     def exit(self):
-            chat_data=[self.uu, "EEXIT",""]
+            chat_data=[self.uu, "EEXIT","","",""]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             print("Connection closed.")
-    def set(self, chat_box,input):
+            
+    # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP, state]
+    def set(self, chat_box,input,chat_box_group,input2):
         self.chat = chat_box
         self.input = input
+        self.chatgroup = chat_box_group
+        self.input2 = input2
            
 class ReceiveData(threading.Thread):
     def __init__(self,tcp_socket, event):
@@ -1005,16 +1012,35 @@ class ReceiveData(threading.Thread):
             print("recv_data:", recv_data)
             if recv_data == "CLOSE CONN":
                 break
-            if userfriend == recv_data[0]:
-                self.chat.configure(state="normal")
-                msg = "{}: {}".format(recv_data[0],recv_data[1])
-                self.chat.insert("end","\n"+msg+"\n")
-                self.chat.configure(state="disabled")
-                self.chat.see("end")
-                #logs = PersistentLogs()
-                #logs.WriteToLog(userfriend,msg)
-    def set(self,chat_box):
-        self.chat = chat_box   
+            if self.state == "SINGLE":
+                print("Writing to SINGLE chat window...")
+                if userfriend == recv_data[0]:
+                    self.chat.configure(state="normal")
+                    msg = "{}: {}".format(recv_data[0],recv_data[1])
+                    print("====================")
+                    print("msg: {}\nFrom: {}".format(recv_data[1],recv_data[0]))
+                    print("====================")
+                    self.chat.insert("end","\n"+msg+"\n")
+                    self.chat.configure(state="disabled")
+                    self.chat.see("end")
+            if self.state == "GROUP":
+                print("Writing to GROUP chat window...")
+                if userfriend == recv_data[0]:
+                    self.chatgroup.configure(state="normal")
+                    msg = "{}: {}".format(recv_data[0],recv_data[1])
+                    print("====================")
+                    print("msg: {}\nFrom: {}".format(recv_data[1],recv_data[0]))
+                    print("====================")
+                    self.chatgroup.insert("end","\n"+msg+"\n")
+                    self.chatgroup.configure(state="disabled")
+                    self.chatgroup.see("end")
+    # set structure: [chatboxSINGLE, chatboxGROUP, state]
+    def set(self,chat_box,chat_box_group,state):
+        self.state = state
+        self.chat = chat_box
+        self.chatgroup = chat_box_group  
+        
+    
 
         
         

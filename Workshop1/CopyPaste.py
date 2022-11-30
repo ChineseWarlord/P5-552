@@ -342,7 +342,7 @@ class Page_Chat(tk.Frame):
         self.frame6.pack(side=tk.TOP,expand=True,fill="both")
         self.frame6.propagate(0)
         self.LoadUserFriends()
-        
+        self.LoadGroups()
        
         # Exit Frame
         self.frame3 = tk.Frame(self.main_frame, bg="black",borderwidth=5,highlightbackground="yellow", highlightthickness=4)
@@ -366,6 +366,7 @@ class Page_Chat(tk.Frame):
         
         self.group_chats = tk.Button(self.frame7, text="Group List",font=('arial',10,'bold'),height=1,command=lambda : [self.active_chat()], bg="magenta", fg = "black", borderwidth=1,relief="raised")
         self.group_chats.pack(side=tk.LEFT,fill=tk.X, expand=True, padx=1.5, pady=1.5)
+        
         
         # EXIT button
         #self.return_button = tk.Button(self.frame3, text="EXIT",command=lambda : [root.show_frame("Page_Login"),self.socketchat.close()], bg="#211A52", fg = "white") !ORIGINAL!
@@ -393,14 +394,21 @@ class Page_Chat(tk.Frame):
             print("Friend List")
             self.frame5.pack(side=tk.TOP,expand=False,fill=tk.X, pady=15)
             self.framegroup.forget()
+            #self.framegroup.forget()
+            #self.removeGroupWindow()
+            #self.GroupChatWindowUserFrame.forget()
+            #self.button_exit()
         else:
             self.group_chats.config(text="Friend List",font=('arial',10,'bold'),height=1, bg="magenta", fg = "black", borderwidth=1,relief="raised")
             print("Group List!")
             active_chat = True
+            
             self.removeGroupWindow()
+            #self.removeChatWindows()
+            #self.GroupChatWindowUserFrame.forget()
             self.frame5.forget()
             self.GroupChat()
-            self.LoadGroups()
+            
     def removeGroupWindow(self):
         for widget in self.frame4.winfo_children():
             if isinstance(widget,tk.Frame):
