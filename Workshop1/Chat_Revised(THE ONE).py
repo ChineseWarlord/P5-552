@@ -27,14 +27,16 @@ from tkinter import messagebox
 SERVER_IP = "127.0.0.1"
 SERVER_PORT = 1234
 VERIFY_PORT = 2001
-LOGS_PORT = 65433
+LOGS_PORT = 2005
 LOAD_USER_PORT = 1000
 BUFFER_SIZE = 10000
 
 stupidusername = ""
 userfriend = ""
+GroupListFriends = []
 UserDataLoaded = []
 active_window = False
+active_window2 = False
 active_chat = False
 
 class Main_View(tk.Tk):
@@ -47,7 +49,7 @@ class Main_View(tk.Tk):
         self.container.grid_rowconfigure(0, weight = 1)
         self.container.grid_columnconfigure(0, weight = 1)        
         self.frames = {}
-        
+    
     def add_page(self,Name, Page, thread1=0, thread2=0, socketlogin=0, socketchat=0):
         if Name == "Page_Chat":
             self.frames[Name] = Page(parent=self.container,controller=self, thread1=thread1,thread2=thread2, socketlogin=socketlogin, socketchat=socketchat)    
@@ -70,8 +72,10 @@ class Page_Login(tk.Frame):
         
         print("PAGE_LOGIN Am I printing this? 1")
         
-        self.frame_master = tk.Frame(master=self)
+        self.frame_master = tk.Frame(master=self,width=450,height=200)
         self.frame_master.pack(side=tk.TOP, fill='both',expand=True)
+        #self.frame_master.propagate(0)
+        
         
         self.frame1 = tk.Frame(self.frame_master)
         self.frame1.pack(side=tk.TOP,expand=True)
@@ -317,14 +321,16 @@ class Page_Chat(tk.Frame):
                                    highlightthickness=6)
         self.main_frame.pack(side=tk.LEFT,expand=False,fill=tk.Y)
         # Chat Menu + Settings label - top side in frame1
-        self.frame1 = tk.Frame(self.main_frame, bg="orange",borderwidth=10)
+        self.frame1 = tk.Frame(self.main_frame, bg="orange",borderwidth=1, width=100,height=100)
         self.frame1.pack(side=tk.TOP,expand=False,fill=tk.X)
+        self.frame1.propagate(1)
+        
         self.frame7 = tk.Frame(self.main_frame, bg="black",borderwidth=1)
         self.frame7.pack(side=tk.TOP,fill=tk.X)
         # Users Frame
-        self.frame2 = tk.Frame(self.main_frame, bg="blue",borderwidth=5,height=100,width=100,highlightbackground="black", highlightthickness=4)
+        self.frame2 = tk.Frame(self.main_frame, bg="blue",height=100,width=300,highlightbackground="black", highlightthickness=4)
         self.frame2.pack(side=tk.TOP,expand=True,fill='both', padx=10,pady=10)
-        self.frame2.propagate(False)
+        self.frame2.propagate(0)
         
         
         # Frame for friend list
@@ -332,8 +338,9 @@ class Page_Chat(tk.Frame):
         self.frame5.pack(side=tk.TOP,expand=False,fill=tk.X, pady=15)
         self.FriendList_Label = tk.Label(self.frame5,text="Friend List", bg="green", fg="white",font=('arial',10,'bold'), borderwidth=1)
         self.FriendList_Label.pack(side=tk.TOP,fill='both',expand=True,pady=15)
-        self.frame6 = tk.Text(self.frame5, bg="yellow",highlightbackground="green", highlightthickness=4)
+        self.frame6 = tk.Text(self.frame5, bg="yellow",highlightbackground="green", highlightthickness=4,height=100,width=100)
         self.frame6.pack(side=tk.TOP,expand=True,fill="both")
+        self.frame6.propagate(0)
         self.LoadUserFriends()
        
         # Exit Frame
@@ -366,7 +373,6 @@ class Page_Chat(tk.Frame):
         #self.return_button.pack(side=tk.TOP,expand=False)
         self.return_button.pack()
         #self.return_button.bind("<Return>",self.key_pressed_exit)
-        
         # Chat Window
         self.frame4 = tk.Frame(self.frame_main, 
                                bg="yellow",
@@ -387,21 +393,27 @@ class Page_Chat(tk.Frame):
             print("Friend List")
             self.frame5.pack(side=tk.TOP,expand=False,fill=tk.X, pady=15)
             self.framegroup.forget()
+            #self.framegroup.forget()
             #self.removeGroupWindow()
+            #self.GroupChatWindowUserFrame.forget()
             #self.button_exit()
         else:
             self.group_chats.config(text="Friend List",font=('arial',10,'bold'),height=1, bg="magenta", fg = "black", borderwidth=1,relief="raised")
             print("Group List!")
             active_chat = True
+            
+            self.removeGroupWindow()
+            #self.removeChatWindows()
+            #self.GroupChatWindowUserFrame.forget()
             self.frame5.forget()
             self.GroupChat()
             
     def removeGroupWindow(self):
-        for widget in self.framegroup.winfo_children():
+        for widget in self.frame4.winfo_children():
             if isinstance(widget,tk.Frame):
-                #print("removechatwindow widgets: {}".format(widget))
+                #print("removegroupwindow widgets: {}".format(widget))
                 #widget.destroy()
-                widget.forget()        
+                widget.forget()      
             
     def GroupChat(self):
         self.tkraise()
@@ -413,8 +425,10 @@ class Page_Chat(tk.Frame):
         self.Add2Group = tk.Button(self.framegroup, text="Create Group or Add User",command=lambda : [self.CreateGroup()], bg="#211A52", fg = "white")
         self.Add2Group.pack(side=tk.TOP,expand=False)
         
-        self.framegroup3 = tk.Listbox(self.framegroup, bg="yellow",highlightbackground="green", highlightthickness=4)
+        self.framegroup3 = tk.Listbox(self.framegroup, bg="yellow",highlightbackground="green", highlightthickness=4,
+                                      width=300,height=100)
         self.framegroup3.pack(side=tk.TOP,expand=False)
+        self.framegroup3.propagate(0)
         self.LoadGroups()
         
     def CreateGroup(self):
@@ -443,8 +457,9 @@ class Page_Chat(tk.Frame):
         
         self.usernameGroup_tryadd_label = tk.Label(self.frameaddGroup_User_TRY,text="Create a new group or Add user to group")
         self.usernameGroup_tryadd_label.pack(side=tk.TOP,padx=5, pady=5)
-        self.usernameGroup_tryadd_label2 = tk.Label(self.frameaddGroup_User_TRY,text="To create group: Enter group name\nTo add user to group: Enter group name and User from friendlist")
-        self.usernameGroup_tryadd_label2.pack(side=tk.TOP,padx=5, pady=10)
+        
+        #self.usernameGroup_tryadd_label2 = tk.Label(self.frameaddGroup_User_TRY,text="To create group: Enter group name\nTo add user to group: Enter group name and User from friendlist")
+        #self.usernameGroup_tryadd_label2.pack(side=tk.TOP,padx=5, pady=10)
     
         self.usernameGroup_label = tk.Label(self.frameaddGroup_User,text="Group name:")
         self.usernameGroup_label.pack(side=tk.LEFT,padx=5, pady=5)
@@ -508,19 +523,17 @@ class Page_Chat(tk.Frame):
             print("From Server: {}".format(datax))
             datax = datax.split('#')
             print("From Server2: {}".format(datax))
-            print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
+            print("datax[0]: {}\ndatax[1]: {}:".format(datax[0],datax[1]))
 
-            if datax[0] == "USER ADDED IN GROUPCHAT":
-                print("USER ADDED IN GROUPCHAT")
-                self.usernameGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
-                self.Add_UserGroup_Frame.withdraw()
-                #self.removeUsers()
-                #self.LoadUserFriends()
-                self.seY.close()
             if datax[0] == "USER ALREADY IN GROUPCHAT":
                 print("USER ALREADY IN GROUPCHAT")
                 self.usernameGroup_tryadd_label.config(text="User already in groupchat!", fg="red", font=('arial',10,'bold'))
                 self.seY.close()
+            else:
+                print("USER ADDED IN GROUPCHAT")
+                self.usernameGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
+                self.seY.close()
+                
     def removeGroups(self):
         for widget in self.framegroup3.winfo_children():
             print("widgets: {}".format(widget))
@@ -578,73 +591,102 @@ class Page_Chat(tk.Frame):
         
         self.dataLoaded2 = self.LoadSocket.recv(BUFFER_SIZE)
         self.dataLoaded2 = pickle.loads(self.dataLoaded2)
-        global UserDataLoaded
+        
         print("Users loaded from server: {}".format(self.dataLoaded2))
         count = 0
         self.LoadedGroupLabels = []
+        if self.dataLoaded2 == "No group found":
+            print("No users loaded from server")
+        else:
+            for x in self.dataLoaded2:
+                self.LoadedGroupLabel = tk.Button(self.framegroup3,text="{}".format(self.dataLoaded2[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded2[count]:self.active_window2(name))
+
+                name = self.dataLoaded2[count]
+                print("This is name: {}".format(name))
+                print("Group name: {}".format(self.dataLoaded2[count]))  
+                self.LoadedGroupLabel.pack(side=tk.TOP,expand=False,pady=3)
+                self.LoadedGroupLabels.append(self.LoadedGroupLabel)
+                count += 1
+                    
+    def active_window2(self,name):
+        global active_window2
         
-        for x in self.dataLoaded2:
-            self.LoadedGroupLabel = tk.Button(self.framegroup3,text="{}".format(self.dataLoaded2[count]), bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.dataLoaded2[count]:self.OpenGroupChat(self.LoadedGroupLabel))
+        # Switch button
+        if active_window2:
+            active_window2 = False
+            print("Window is inactive!")
+            #self.removeChatWindows()
+            #self.button_exit()
+        else:
+            self.removeChatWindows()
+            print("Window is active!")
+            self.OpenGroupChat(name)
+            # ORIGINAL active_window = True
+            active_window2 = False
             
-            name = self.dataLoaded2[count]
-            print("This is name: {}".format(name))
-            print("Group name: {}".format(self.dataLoaded2[count]))  
-            self.LoadedGroupLabel.pack(side=tk.TOP,expand=False,pady=3)
-            self.LoadedGroupLabels.append(self.LoadedGroupLabel)
-            count += 1            
-    
-    def OpenGroupChat(self,friend): # SKAL RETTES SÅ DEN ÅBNER GRUPPECHAT!
-        global userfriend
-        userfriend = friend
-            
-        print("\nwhat is friend name: {}".format(friend))
+    def OpenGroupChat(self,group):
+        print("\nwhat is group name: {}".format(group))
         print("socketlogin status: {}".format(self.socketlogin))
         print("socketchat status: {}".format(self.socketchat))
         
         self.tkraise()
         
-        self.ChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
-        self.ChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
-        self.userchatLabel = tk.Label(self.ChatWindowUserFrame,text="{}'s Chat".format(friend),bg="magenta", fg="black",font=('arial',14,'bold'), borderwidth=1)
+        self.GroupChatWindowUserFrame = tk.Frame(self.frame4, bg="magenta",highlightbackground="green", highlightthickness=6 )
+        self.GroupChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
+        self.userchatLabel = tk.Label(self.GroupChatWindowUserFrame,text="{}'s Chat".format(group),bg="magenta", fg="black",font=('arial',14,'bold'), borderwidth=1)
         self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)  
         
-        self.ChatTestFrame = tk.Frame(self.ChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=340,width=800)
-        self.ChatTestFrame.pack(side=tk.TOP)
-        self.ChatTestFrame.pack_propagate(0)
+        self.GroupChatTestFrame = tk.Frame(self.GroupChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=340,width=800)
+        self.GroupChatTestFrame.pack(side=tk.TOP)
+        self.GroupChatTestFrame.pack_propagate(0)
         
           
         #self.chat_box = tk.Text(self.ChatWindowUserFrame, height=25)
-        self.chat_box = tk.Text(self.ChatTestFrame, wrap = tk.WORD)
-        self.chat_box.configure(state="disabled")
-        self.chat_box.pack(fill='both',expand=True)
-        self.chat_box.pack_propagate(0)
+        self.Groupchat_box = tk.Text(self.GroupChatTestFrame, wrap = tk.WORD)
+        self.Groupchat_box.configure(state="disabled")
+        self.Groupchat_box.pack(fill='both',expand=True)
+        self.Groupchat_box.pack_propagate(0)
         
         self.stored_logs = []
-        self.ReadLogs()
+        self.ReadLogs("group",group)
         self.stored_logs.remove("STOP NU FOR HELVEDE")
         #print("logs: ", logs)
-        self.chat_box.configure(state="normal")
+        self.Groupchat_box.configure(state="normal")
         #self.chat_box.insert("end","\n"+logs) ORIGINAL
         for i in self.stored_logs:
-            self.chat_box.insert("end",i)
-        self.chat_box.configure(state="disabled")
-        self.chat_box.see("end")
+            self.Groupchat_box.insert("end",i)
+        self.Groupchat_box.configure(state="disabled")
+        self.Groupchat_box.see("end")
         
-        scrollbar = tk.Scrollbar(self.chat_box,command=self.chat_box.yview)
-        scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
-        self.chat_box['yscrollcommand'] = scrollbar.set
+        scrollbarGroup = tk.Scrollbar(self.Groupchat_box,command=self.Groupchat_box.yview)
+        scrollbarGroup.pack(side=tk.RIGHT,fill=tk.Y)
+        self.Groupchat_box['yscrollcommand'] = scrollbarGroup.set
         
-        self.input_field = tk.Entry(self.ChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
-        self.input_field.pack(side=tk.TOP,pady=1)
-        self.input_field.bind("<Return>",self.key_sendmsg)
-        self.input_field.focus()
+        # Load groupname users to msg
+        self.LoadSocket = socket(AF_INET,SOCK_STREAM)
+        self.LoadSocket.connect((SERVER_IP, LOAD_USER_PORT))
+        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+        self.data_string = pickle.dumps([group,"",stupidusername,"Load_Group_Users"])
+        self.LoadSocket.send(self.data_string)
+        global GroupListFriends
+        GroupListFriends = self.LoadSocket.recv(BUFFER_SIZE)
+        GroupListFriends = pickle.loads(GroupListFriends)
+        print("Users in group:",GroupListFriends)
         
-        self.thread1.set(self.chat_box,self.input_field)
-        self.thread2.set(self.chat_box)
+        for x in GroupListFriends:
+            print("Users:",x)
         
-        self.button = ttk.Button(self.ChatWindowUserFrame, text='Send')
-        self.button['command'] = self.send_message_button
-        self.button.pack()
+        self.input_fieldGroup = tk.Entry(self.GroupChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
+        self.input_fieldGroup.pack(side=tk.TOP,pady=1)
+        self.input_fieldGroup.bind("<Return>",self.key_sendmsg_group)
+        self.input_fieldGroup.focus()
+        
+        self.thread1.set(self.Groupchat_box,self.input_fieldGroup)
+        self.thread2.set(self.Groupchat_box)
+        
+        self.buttonGroup = ttk.Button(self.GroupChatWindowUserFrame, text='Send')
+        self.buttonGroup['command'] = self.send_message_button_group
+        self.buttonGroup.pack()
     
     def key_pressed(self, event):
         #self.AddShit()
@@ -653,7 +695,6 @@ class Page_Chat(tk.Frame):
         #self.LoadUserFriends()
         self.clear_entry()
         self.Add_User_Frame.withdraw()
-            
             
     def Add_Users_Window(self):
         self.Add_User_Frame = tk.Toplevel(root)
@@ -770,7 +811,7 @@ class Page_Chat(tk.Frame):
             count += 1            
     def removeUsers(self):
         for widget in self.frame6.winfo_children():
-            print("widgets: {}".format(widget))
+            #print("widgets: {}".format(widget))
             if isinstance(widget,tk.Button):
                 widget.destroy()
     def removeChatWindows(self):
@@ -822,7 +863,7 @@ class Page_Chat(tk.Frame):
         self.chat_box.pack_propagate(0)
         
         self.stored_logs = []
-        self.ReadLogs()
+        self.ReadLogs("single","")
         self.stored_logs.remove("STOP NU FOR HELVEDE")
         #print("logs: ", logs)
         self.chat_box.configure(state="normal")
@@ -854,28 +895,30 @@ class Page_Chat(tk.Frame):
         self.button['command'] = self.send_message_button
         self.button.pack()
     
-    def ReadLogs(self):
+    def ReadLogs(self,state,groupname):
         global userfriend
+        GroupOrSingle = state
+        groupName = groupname
         self.storeddata = []
         self.data = ""
+        
         self.logssocket = socket(AF_INET,SOCK_STREAM)
         self.logssocket.connect((SERVER_IP, LOGS_PORT))
-        # Data structure: [usernameLogin, usernameFriend]
-        self.data_string = pickle.dumps([stupidusername, userfriend])
-        self.logssocket.send(self.data_string)
         
+        if GroupOrSingle == "single":
+            # Data structure: [usernameLogin, usernameFriend, groupname]
+            self.data_string = pickle.dumps([stupidusername, userfriend])
+            self.logssocket.send(self.data_string)
+            
+        if GroupOrSingle == "group":
+            # Data structure: [usernameLogin, usernameFriend, groupname]
+            self.data_string = pickle.dumps([stupidusername, groupName])
+            self.logssocket.send(self.data_string)
         
         while True:
             self.data = self.logssocket.recv(BUFFER_SIZE)
-            #if not self.data:
-            #    print("Inside break statement")
-            #    self.logssocket.close() 
-            #    break
             self.data = pickle.loads(self.data)
-            #print("server logs: {}".format(self.data))
             self.stored_logs.append(self.data)
-            #print("self.stored_logs: {}".format(self.stored_logs))
-            
             if "STOP NU FOR HELVEDE" in self.stored_logs:
                 self.logssocket.close()
                 break
@@ -883,11 +926,18 @@ class Page_Chat(tk.Frame):
     def key_sendmsg(self, event):
         #self.AddShit()
         self.send_message_button() 
-        self.input_field.delete(0, 'end')            
+        self.input_field.delete(0, 'end')
+    def key_sendmsg_group(self, event):
+        #self.AddShit()
+        self.send_message_button()           
+        self.input_fieldGroup.delete(0, 'end')
         
     def send_message_button(self):
         self.thread1.send()
         self.input_field.delete(0, 'end')
+    def send_message_button_group(self):
+        self.thread1.send_to_group()
+        self.input_fieldGroup.delete(0, 'end')
         
     def send_message_enter(self, event):
         self.thread1.send()
@@ -898,25 +948,40 @@ class Page_Chat(tk.Frame):
         active_window = False
         self.removeChatWindows()
         self.thread1.exit()
+        exit()
     
 class SendData():
     def __init__(self,tcp_socket, user):
         self.ds=tcp_socket
         self.uu=user
     def send(self): # LAV EN "KOPI" DER SENDER TIL GRUPPECHATS!
-            global userfriend
-            send_data = self.input.get()
-            print("send data: {}".format(send_data))
-            print(len(send_data))
-            if len(send_data) > 1:
-                chat_data=[self.uu,send_data, userfriend]
-                chat_string = pickle.dumps(chat_data)
-                self.ds.send(chat_string)
-                self.chat.configure(state="normal")
-                self.chat.insert("end","\nYOU: {}\n".format(send_data))
-                self.chat.configure(state="disabled")
-                self.chat.see("end")
-                    
+        global userfriend
+        send_data = self.input.get()
+        print("send data: {}".format(send_data))
+        print(len(send_data))
+        if len(send_data) > 1:
+            chat_data=[self.uu,send_data, userfriend]
+            chat_string = pickle.dumps(chat_data)
+            self.ds.send(chat_string)
+            self.chat.configure(state="normal")
+            self.chat.insert("end","\nYOU: {}\n".format(send_data))
+            self.chat.configure(state="disabled")
+            self.chat.see("end") 
+                
+    def send_to_group(self):
+        global GroupListFriends
+        send_data = self.input.get()
+        print("send data: {}".format(send_data))
+        print(len(send_data))
+        if len(send_data) > 1:
+            chat_data=[self.uu,send_data, GroupListFriends]
+            chat_string = pickle.dumps(chat_data)
+            self.ds.send(chat_string)
+            self.chat.configure(state="normal")
+            self.chat.insert("end","\nYOU: {}\n".format(send_data))
+            self.chat.configure(state="disabled")
+            self.chat.see("end")
+                      
                 
     def exit(self):
             chat_data=[self.uu, "EEXIT",""]
@@ -971,5 +1036,8 @@ if __name__=="__main__":
     #root.add_page("Page_UserRegister",Page_UserRegister)
     root.show_frame("Page_Login")
     
+    
     root.mainloop()
+    
+    os.system("cls")
     

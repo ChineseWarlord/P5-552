@@ -11,7 +11,7 @@ HOST = '127.0.0.1'           # Symbolic name meaning all available interfaces
 LOAD_USER_PORT = 1000
 BASE_PORT = 1234    # Arbitrary non-privileged port
 PP = 2001  # Port to listen on (non-privileged ports are > 1023)
-LOGS_PORT = 65433
+LOGS_PORT = 2005
 
 BUFFER_SIZE = 1024  # Receive Buffer size (power of 2)
 MAX_USERS = 3
@@ -137,6 +137,7 @@ class VerifyThread(threading.Thread):
                 csv_writer = csv.writer(f)
                 csv_writer.writerow(["USERS:"])       
             print("GROUP CREATED!")
+            open('UserLogs/{}/{}.txt'.format(LoginName,GroupName), 'a', newline='')
             self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
         else:
             self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))
@@ -229,7 +230,7 @@ class VerifyThread(threading.Thread):
             test1.clear()
             self.data_string = pickle.dumps("NO LOGIN!")
             self.conn.send(self.data_string)
-            #self.conn.close()
+    
     
     def Check_User_Register(self):
         rows = [self.data2]
@@ -308,6 +309,8 @@ class LoadDataThread(threading.Thread):
                 self.LoadingUsers()
             if self.Data_Check == "Load_Groups":
                 self.LoadingGroups()
+            if self.Data_Check == "Load_Group_Users":
+                self.LoadingGroupUsers()
                 
     def LoadingUsers(self):
         UserFriendList = []
@@ -330,26 +333,36 @@ class LoadDataThread(threading.Thread):
         
         dir_path = "UserGroups/{}".format(Username)
         
-        # Iterate directory
-        for path in os.listdir(dir_path):
-            # check if current path is a file
-            if os.path.isfile(os.path.join(dir_path, path)):
-                UserGroupList.append(path)
-                UserGroupList = [x.split('.')[0] for x in UserGroupList]
-        print(UserGroupList)
+        GroupExist = os.path.exists("UserGroups/{}".format(Username))
+        if GroupExist == True:
+            # Iterate directory
+            for path in os.listdir(dir_path):
+                # check if current path is a file
+                if os.path.isfile(os.path.join(dir_path, path)):
+                    UserGroupList.append(path)
+                    UserGroupList = [x.split('.')[0] for x in UserGroupList]
+            print(UserGroupList)
+
+            test = [x.split('.')[0] for x in UserGroupList]
+            print("what is test?:", test)
+            LoadUserGroupData = pickle.dumps(UserGroupList)
+            self.conn.send(LoadUserGroupData)
+        else:
+            print("Create group first")
+            self.conn.send(pickle.dumps("No group found"))
         
-        test = [x.split('.')[0] for x in UserGroupList]
-        print("what is test?:", test)
-        
-        #with open("UserGroups/{}/{}.csv".format(Username,GroupName), 'r', newline='') as f:
-        #    csv_reader = csv.reader(f, delimiter=',')
-        #    for lineGroup in csv_reader:
-        #        cunt = ''.join(lineGroup)  
-        #        UserGroupList.append(cunt)
-        #    print("UserGroupList:",UserGroupList)
-        #UserGroupList.remove("USERS:")
-        LoadUserGroupData = pickle.dumps(UserGroupList)
-        self.conn.send(LoadUserGroupData)
+    def LoadingGroupUsers(self):
+        Username = self.Data_LoginName
+        GroupName = self.Data_GroupName
+        UsersInGroup = []
+        with open("UserGroups/{}/{}.csv".format(Username,GroupName), 'r', newline='') as f:
+            csv_reader = csv.reader(f, delimiter=',')
+            for lineGroup in csv_reader:
+                cunt = ''.join(lineGroup)  
+                UsersInGroup.append(cunt)
+        UsersInGroup.remove("USERS:")
+        print("UsersInGroup:",UsersInGroup)
+        self.conn.send(pickle.dumps(UsersInGroup)) 
         
 
 class ClientThread(threading.Thread):
@@ -427,8 +440,7 @@ class ClientThread(threading.Thread):
                 recv_data = pickle.loads(recv_string)
                 if len(recv_string) == 0: 
                         print("Closed shit")
-                        break
-                print("Not printing anymore")    
+                        break  
                 # msg structure: [userlogin, msg, toUser]
                 print("\n=============================================")
                 print("What is recv_data: {}".format(recv_data))
@@ -436,6 +448,13 @@ class ClientThread(threading.Thread):
                 print("What is recv_data[1]: {}".format(recv_data[1]))
                 print("What is recv_data[2]: {}".format(recv_data[2]))
                 print("=============================================\n")
+                
+                ##############################################################
+                ######## How do we check list of users in group?      ########
+                ######## Data structure is:                           ########
+                ######## [user, msg, ['friend1','friend2','friend3']] ########
+                ##############################################################                                                      
+                
                 if recv_data[1] == "EEXIT":
                     print("==================================\n==================================")
                     print("This is current username:", uusername)
@@ -479,6 +498,7 @@ class ClientThread(threading.Thread):
             print('    from {}'.format(clientAddress))
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
+  
             
 class UserLogThread(threading.Thread):
     def __init__(self):
@@ -504,11 +524,9 @@ class UserLogThread(threading.Thread):
             # Data structure: ReadLog(usernameLogin, usernameFriend)
             logs = PersistentLogs()
             
-            Wall_of_Text = logs.ReadLog(self.data[0],self.data[1])
-            #print("Wall_of_Text: {}".format(Wall_of_Text))
             
-            #Wall_of_Text = pickle.dumps(Wall_of_Text)
-            #self.clientsock.send(Wall_of_Text)
+            Wall_of_Text = logs.ReadLog(self.data[0],self.data[1])
+        
             
             for i in Wall_of_Text:
                 #print("Wall_of_Text: {}".format(i))
@@ -524,91 +542,38 @@ class PersistentLogs():
     def __init__(self):
         print("Opening logs...")
         
-    def WriteToLog(self,user,msg,userfriend):
-        file1 = open('UserLogs/{}/{}.txt'.format(user,userfriend), 'a', newline='')
+    def WriteToLog(self,user,msg,name):
+        file1 = open('UserLogs/{}/{}.txt'.format(user,name), 'a', newline='')
         #file1.write("YOU: "+msg+"\n") ORIGINAL
         file1.write("\nYOU: "+msg+"\n")
         file1.close()
-        file2 = open('UserLogs/{}/{}.txt'.format(userfriend,user), 'a', newline='')
+        file2 = open('UserLogs/{}/{}.txt'.format(name,user), 'a', newline='')
         #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
         file2.write("\n{}: ".format(user)+msg+"\n")
         file2.close()
         
-    def ReadLog(self,user,userfriend,):
-        text = ""
-        text2 = []
-        with open('UserLogs/{}/{}.txt'.format(user,userfriend), 'r', newline='') as f:
-        #with open('UserLogs/test.txt', 'r', newline='') as f:
-            #text = f.read()
-            #print(text)
-            text2 = f.readlines()
-            #text = f.read()
-            #text = f.readlines()
-            #print("text2: {}".format(text2))
-            #for line in f:
-            #    text2.append(line.rstrip())
-            #    print("text2: {}".format(text2))
-            #    #text2.append(line)
-            #    return text2
-            return text2
-
-
-
-# TODO:  
-# SKAL FJERNES 
-class VerifyThread2(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.Data_User = []
-        self.Data_Pass = []
-        self.Usernames = []
-        self.Passwords = []
+    def WriteToLogGroup(self,user,msg,name):
+        file1 = open('UserLogs/{}/{}.txt'.format(user,name), 'a', newline='')
+        #file1.write("YOU: "+msg+"\n") ORIGINAL
+        file1.write("\nYOU: "+msg+"\n")
+        file1.close()
+        file2 = open('UserLogs/{}/{}.txt'.format(name,user), 'a', newline='')
+        #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
+        file2.write("\n{}: ".format(user)+msg+"\n")
+        file2.close()
         
-        while True:
-            self.s = socket(AF_INET, SOCK_STREAM)
-            self.s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self.s.bind((HOST, 39612))
-            self.s.listen()
-            self.conn, addr = self.s.accept()
-            #with self.conn:
-            print("Connected to verify thread!")
-            print("socket: {}".format(self.conn))
-            print(f"IP address: {addr}")
-            
-            
-            data = self.conn.recv(BUFFER_SIZE)
-            self.data2 = pickle.loads(data)
-            print("Data: {}".format(self.data2))
-            self.Data_User = self.data2[0]
-            self.Data_Pass = self.data2[1]
-            self.Data_Check = self.data2[2]
-            self.Data_UserPass = self.data2[0]+self.data2[1]
-            print("Data_User: {}".format(self.Data_User))  
-            print("Data_Pass: {}".format(self.Data_Pass))
-            print("Data_Check: {}".format(self.Data_Check))
-            print("Data_UserPass: {}".format(self.Data_UserPass)) 
-            #text = "OK - Cancer"
-            #self.data_string = pickle.dumps(text)
-            #self.conn.send(self.data_string)
-            self.data2.pop(2)
-            print("DELETED test: ", self.data2)
-            if self.Data_Check == "UserAddGroup":
-                self.CreateGroup(self.Data_Pass)
-                self.conn.close()
-                
-    def CreateGroup(self,name):
-        GroupName = self.Data_User
-        global LoginName
+    def ReadLog(self,user,name):
+        text = []
+        with open('UserLogs/{}/{}.txt'.format(user,name), 'r', newline='') as f:
+            text = f.readlines()
+            return text
         
-        self.name = name
-        
-        print("LoginName:", self.name)
-        
-        os.makedirs("UserGroups",exist_ok=True) 
-        os.makedirs("UserGroups/{}".format(self.name),exist_ok=True)
-        open("UserGroups/{}/{}.csv".format(self.name,GroupName), "a")
-     
-
+    #def ReadLogGroup(self,user,groupName):
+    #    text = ""
+    #    text2 = []
+    #    with open('UserLogs/{}/{}.txt'.format(user,groupName), 'r', newline='') as f:
+    #        text2 = f.readlines()
+    #        return text2
 
         
 server = socket(AF_INET, SOCK_STREAM)
@@ -623,8 +588,6 @@ if __name__=="__main__":
     
     process1 = Process(target=VerifyThread)
     process1.start()
-    #process4 = Process(target=VerifyThread2)
-    #process4.start()
     process2 = Process(target=LoadDataThread)
     process2.start()
     process3 = Process(target=UserLogThread)
