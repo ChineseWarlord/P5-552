@@ -555,7 +555,7 @@ class UserLogThread(threading.Thread):
                 #time.sleep(0.1)
                 self.clientsock.send(Wall_of_Text)
                 
-            STOP = "STOP NU FOR HELVEDE"
+            STOP = "STOP!"
             STOP = pickle.dumps(STOP)
             self.clientsock.send(STOP)
               
