@@ -442,16 +442,22 @@ class Page_Chat(tk.Frame):
         
         self.frameaddGroup = tk.Frame(self.Add_UserGroup_Frame, borderwidth=5, bg="red")
         self.frameaddGroup.pack(side=tk.TOP,fill='both',expand=True)
+        
         self.frameaddGroup_User_TRY = tk.Frame(self.frameaddGroup, borderwidth=2, bg="Yellow")
         self.frameaddGroup_User_TRY.pack(side=tk.TOP)
+        
         self.frameaddGroup_User = tk.Frame(self.frameaddGroup, borderwidth=5, bg="Blue")
         self.frameaddGroup_User.pack(side=tk.TOP)
+        
         self.frameAddUsersLabel = tk.Frame(self.frameaddGroup, borderwidth=5, bg="Blue")
         self.frameAddUsersLabel.pack(side=tk.TOP)
+        
         self.frameAddUsers = tk.Frame(self.frameaddGroup, borderwidth=5, bg="Blue")
         self.frameAddUsers.pack(side=tk.TOP)
+        
         self.frameaddGroupName = tk.Frame(self.frameaddGroup, borderwidth=5, bg="Blue")
         self.frameaddGroupName.pack(side=tk.TOP)
+        
         self.frameaddGroup_User_BUT = tk.Frame(self.frameaddGroup, borderwidth=5, bg="Green")
         self.frameaddGroup_User_BUT.pack()
         

@@ -37,6 +37,8 @@ LoginName = ""
 UserLog = ""
 UserSockets = []
 
+FUCKMITLIV = []
+
 
 class VerifyThread(threading.Thread):
     def __init__(self):
@@ -53,74 +55,82 @@ class VerifyThread(threading.Thread):
             self.s.listen()
             self.conn, addr = self.s.accept()
             
-            with self.conn:
-                print("Connected to verify thread!")
-                print("socket: {}".format(self.conn))
-                print(f"IP address: {addr}")
-
-
-                data = self.conn.recv(BUFFER_SIZE)
-                self.data2 = pickle.loads(data)
-                print("Data: {}".format(self.data2))
-                # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-                self.Data_User = self.data2[0]
-                self.Data_Pass = self.data2[1]
-                self.Data_Check = self.data2[2]
-                self.Data_UserAddToGroup = self.data2[3]
-                self.Data_UserPass = self.data2[0]+self.data2[1]
-                print("Data_User: {}".format(self.Data_User))  
-                print("Data_Pass: {}".format(self.Data_Pass))
-                print("Data_Check: {}".format(self.Data_Check))
-                print("Data_UserPass: {}".format(self.Data_UserPass)) 
-                #text = "OK - Cancer"
-                #self.data_string = pickle.dumps(text)
-                #self.conn.send(self.data_string)
-                self.data2.pop(2)
-                print("DELETED test: ", self.data2)
-                if self.Data_Check == "userregister":
-                    self.Check_User_Register()
-                    #self.conn.close()
-                if self.Data_Check == "userlogin":
-                    self.Check_User_Login()
-                    #self.conn.close()
-                if self.Data_Check == "UserAdd":
-                    global LoginName
-                    LoginName = self.Data_Pass
-                    self.Add_User()
-                    #self.conn.close()
-                if self.Data_Check == "UserAddGroup":
-                    self.CreateGroup()
-                    #self.conn.close()
-                if self.Data_Check == "UserAddToGroup":
-                    self.AddUserToGroup()
-                    
+            
+            print("Connected to verify thread!")
+            print("socket: {}".format(self.conn))
+            print(f"IP address: {addr}")
+            data = self.conn.recv(BUFFER_SIZE)
+            self.data2 = pickle.loads(data)
+            print("Data: {}".format(self.data2))
+            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+            self.Data_User = self.data2[0]
+            self.Data_Pass = self.data2[1]
+            self.Data_Check = self.data2[2]
+            self.Data_UserAddToGroup = self.data2[3]
+            self.Data_UserPass = self.data2[0]+self.data2[1]
+            print("Data_User: {}".format(self.Data_User))  
+            print("Data_Pass: {}".format(self.Data_Pass))
+            print("Data_Check: {}".format(self.Data_Check))
+            print("Data_UserPass: {}".format(self.Data_UserPass)) 
+            #text = "OK - Cancer"
+            #self.data_string = pickle.dumps(text)
+            #self.conn.send(self.data_string)
+            self.data2.pop(2)
+            print("DELETED test: ", self.data2)
+            if self.Data_Check == "userregister":
+                self.Check_User_Register()
+                #self.conn.close()
+            if self.Data_Check == "userlogin":
+                self.Check_User_Login()
+                #self.conn.close()
+            if self.Data_Check == "UserAdd":
+                global LoginName
+                LoginName = self.Data_Pass
+                self.Add_User()
+                #self.conn.close()
+            if self.Data_Check == "UserAddGroup":
+                self.CreateGroup()
+                #self.conn.close()
+            if self.Data_Check == "UserAddToGroup":
+                self.AddUserToGroup()
+                
     def AddUserToGroup(self):
         Username = self.Data_User
         GroupName = self.Data_Pass
         UserToAdd = self.Data_UserAddToGroup 
         UsersInGroup = []
         global LoginName
+        global FUCKMITLIV
         
+        print("==============================================")
+        print("==============================================")
         print("What is Username?:",Username)
         print("What is GroupName?:",GroupName)
         print("What is UserToAdd?:",UserToAdd)
+        print(f"What is UsersInGroup?: {UsersInGroup}")
+        print("==============================================")
+        print("==============================================")
         
-        with open("UserGroups/{}/{}.csv".format(Username,GroupName), 'r', newline='') as f:
-            csv_reader = csv.reader(f, delimiter=',')
-            for lineGroup in csv_reader:
-                cunt = ''.join(lineGroup)  
-                UsersInGroup.append(cunt)
-        print("UsersInGroup:",UsersInGroup) 
-     
-        if UserToAdd not in UsersInGroup:
-                print("Adding user to groupchat!")
-                with open("UserGroups/{}/{}.csv".format(Username,GroupName),"a", newline='') as f:
-                    csv_writer = csv.writer(f)
-                    csv_writer.writerow([UserToAdd])
-                    self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(Username)))   
+        with open(f"UserGroups/{Username}/{GroupName}.csv", 'r', newline='') as read_group:
+            csv_readerX = csv.reader(read_group)
+            for lineGroup in csv_readerX:
+                print(f"lineGroup: {lineGroup}")
+                #cunt = ''.join(lineGroup)
+                #print(f"cunt: {cunt}")
+                #testGroups.append(cunt)
+                UsersInGroup.append(''.join(lineGroup))
+        
         if UserToAdd in UsersInGroup:
-                print("Trying to add the same user!")
-                self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(Username)))
+            print("Han er allerede her!")
+            self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(Username)))
+        if UserToAdd not in UsersInGroup:
+            write_group = open(f"UserGroups/{Username}/{GroupName}.csv", 'a', newline='')
+            csv_writerX = csv.writer(write_group)
+            print("Det ser bar fint ud!")
+            csv_writerX.writerow([UserToAdd])
+            self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(Username)))
+            write_group.close()
+            
                 
     def CreateGroup(self):
         GroupName = self.Data_Pass
@@ -491,6 +501,19 @@ class ClientThread(threading.Thread):
                                 logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
                                 
                         if recv_data[4] == "GROUP":
+                            print(f"recv_data from: [{recv_data[0]}] : {recv_data}")
+                            
+                            
+                            tempList = recv_data[2]
+                            print(f"tempList: [{tempList}]")
+                            print(f"UserSockets: [{UserSockets}]")
+                            
+                            for x1 in UserSockets:
+                                print(f"x1: {x1}")
+                                
+                            for x2 in tempList:
+                                print(f"x2: {x2}")
+                            """
                             for y in recv_data[2]:
                                 print("What is y:",y)
                                 print("what is x[1]:",x[1])
@@ -507,6 +530,7 @@ class ClientThread(threading.Thread):
                                     print("========================")
                                     x[0].send(recv_string)
                             #[loginName,msg,['user1','user2'], PersistentLogName] 
+                            """
                             logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
                             
                             
