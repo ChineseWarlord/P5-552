@@ -93,12 +93,48 @@ class VerifyThread(threading.Thread):
                 #self.conn.close()
             if self.Data_Check == "UserAddToGroup":
                 self.AddUserToGroup()
+       
+    def CreateGroup(self):
+        GroupName = self.Data_Pass
+        global LoginName
+        
+        os.makedirs("UserGroups",exist_ok=True) 
+        os.makedirs("Groups",exist_ok=True) 
+        os.makedirs("GroupLogs",exist_ok=True) 
+        os.makedirs("UserGroups/{}".format(LoginName),exist_ok=True)
+        
+        GroupExist = os.path.exists("UserGroups/{}/{}.csv".format(LoginName,GroupName))
+        if GroupExist == False:
+            #open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='')
+            open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='')      
+            print("GROUP CREATED!")
+            open("UserLogs/{}/{}.txt".format(LoginName,GroupName),"a", newline='')
+            self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
+            
+            SharedGroupExist = os.path.exists("Group/{}.csv".format(GroupName))
+            if SharedGroupExist == False:
+                test = open("Groups/{}.csv".format(GroupName),"a", newline='')
+                csv_writerX = csv.writer(test)
+                print("Det ser bar fint ud!")
+                csv_writerX.writerow([LoginName])
+            
+            GroupLogsExist = os.path.exists("GroupLogs/{}.txt".format(GroupName))
+            if GroupLogsExist == False:
+                open("GroupLogs/{}.txt".format(GroupName),"a", newline='')
+            
+        else:
+            self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))       
+                
+        
+         
+        
                 
     def AddUserToGroup(self):
         Username = self.Data_User
         GroupName = self.Data_Pass
         UserToAdd = self.Data_UserAddToGroup 
         UsersInGroup = []
+        UsersInGroup2 = []
         global LoginName
         global FUCKMITLIV
         
@@ -115,42 +151,61 @@ class VerifyThread(threading.Thread):
             csv_readerX = csv.reader(read_group)
             for lineGroup in csv_readerX:
                 print(f"lineGroup: {lineGroup}")
-                #cunt = ''.join(lineGroup)
-                #print(f"cunt: {cunt}")
-                #testGroups.append(cunt)
                 UsersInGroup.append(''.join(lineGroup))
         
         if UserToAdd in UsersInGroup:
             print("Han er allerede her!")
             self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(Username)))
+            
         if UserToAdd not in UsersInGroup:
             write_group = open(f"UserGroups/{Username}/{GroupName}.csv", 'a', newline='')
             csv_writerX = csv.writer(write_group)
             print("Det ser bar fint ud!")
             csv_writerX.writerow([UserToAdd])
+            
+            GroupExist = os.path.exists(f"UserGroups/{UserToAdd}")
+            if GroupExist == False:
+                print(f"Group does not exist for {UserToAdd}")
+                print("Creating group")
+                os.makedirs("UserGroups/{}".format(UserToAdd),exist_ok=True)
+                AddGroupToUsertoAdd = open(f"UserGroups/{UserToAdd}/{GroupName}.csv", 'a', newline='')
+                csv_writerX2 = csv.writer(AddGroupToUsertoAdd)
+                csv_writerX2.writerow([Username])
+                AddGroupToUsertoAdd.close()
+            else:
+                print(f"Group does exist for {UserToAdd}")
+                print(f"Adding {Username} to group")
+                AddGroupToUsertoAdd = open(f"UserGroups/{UserToAdd}/{GroupName}.csv", 'a', newline='')
+                csv_writerX2 = csv.writer(AddGroupToUsertoAdd)
+                csv_writerX2.writerow([Username])
+                AddGroupToUsertoAdd.close() 
+                
             self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(Username)))
             write_group.close()
             
-                
-    def CreateGroup(self):
-        GroupName = self.Data_Pass
-        global LoginName
+        # GROUP SHIT    
+        with open(f"Groups/{GroupName}.csv", 'r', newline='') as read_group23:
+            csv_readerX69 = csv.reader(read_group23)
+            for lineGroup2 in csv_readerX69:
+                print(f"lineGroup: {lineGroup2}")
+                UsersInGroup2.append(''.join(lineGroup2))
         
-        os.makedirs("UserGroups",exist_ok=True) 
-        os.makedirs("UserGroups/{}".format(LoginName),exist_ok=True)
-        
-        GroupExist = os.path.exists("UserGroups/{}/{}.csv".format(LoginName,GroupName))
-        if GroupExist == False:
-            #open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='')
-            with open("UserGroups/{}/{}.csv".format(LoginName,GroupName),"a", newline='') as f:
-                csv_writer = csv.writer(f)
-                csv_writer.writerow(["USERS:"])       
-            print("GROUP CREATED!")
-            open('UserLogs/{}/{}.txt'.format(LoginName,GroupName), 'a', newline='')
-            self.conn.send(pickle.dumps("GROUP CREATED#{}".format(LoginName)))
-        else:
-            self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))
-         
+        if UserToAdd in UsersInGroup2:
+            print("Han er allerede her!")
+            self.conn.send(pickle.dumps("USER ALREADY IN GROUPCHAT#{}".format(Username)))
+            
+        if  UserToAdd not in UsersInGroup2:            
+            write_group2 = open(f"Groups/{GroupName}.csv", 'a', newline='')
+            csv_writerXxx = csv.writer(write_group2)
+            print("Det ser bar fint ud!")
+            #csv_writerXxx.writerow([Username])
+            csv_writerXxx.writerow([UserToAdd])
+            UserLogExist = os.path.exists(f"UserLogs/{UserToAdd}/{GroupName}.txt")
+            if UserLogExist == False:
+                open(f"UserLogs/{UserToAdd}/{GroupName}.txt", 'a', newline='')
+            self.conn.send(pickle.dumps("USER ADDED IN GROUPCHAT#{}".format(Username)))
+            write_group2.close()
+                           
     def Add_User(self):
         # Checks Users CSV for logged users
         # If trying to add user exits add user to current users friendlist
@@ -239,7 +294,6 @@ class VerifyThread(threading.Thread):
             test1.clear()
             self.data_string = pickle.dumps("NO LOGIN!")
             self.conn.send(self.data_string)
-    
     
     def Check_User_Register(self):
         rows = [self.data2]
@@ -364,12 +418,11 @@ class LoadDataThread(threading.Thread):
         Username = self.Data_LoginName
         GroupName = self.Data_GroupName
         UsersInGroup = []
-        with open("UserGroups/{}/{}.csv".format(Username,GroupName), 'r', newline='') as f:
+        with open("Groups/{}.csv".format(GroupName), 'r', newline='') as f:
             csv_reader = csv.reader(f, delimiter=',')
             for lineGroup in csv_reader:
                 cunt = ''.join(lineGroup)  
                 UsersInGroup.append(cunt)
-        UsersInGroup.remove("USERS:")
         print("UsersInGroup:",UsersInGroup)
         self.conn.send(pickle.dumps(UsersInGroup)) 
         
@@ -568,6 +621,7 @@ class ClientThread(threading.Thread):
                                     #logs.WriteToLog(recv_data[0],recv_data[1],y     )
                                 print("==========================================")             
                         logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
+                        #logs.WriteToLogGroup2(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
@@ -599,19 +653,26 @@ class UserLogThread(threading.Thread):
             print("Data: {}".format(self.data))
             print("Data[0]: {}".format(self.data[0]))
             print("Data[1]: {}".format(self.data[1]))
+            print("Data[2]: {}".format(self.data[2]))
             
             # Data structure: ReadLog(usernameLogin, usernameFriend)
             logs = PersistentLogs()
             
-            
-            Wall_of_Text = logs.ReadLog(self.data[0],self.data[1])
-        
-            
-            for i in Wall_of_Text:
-                #print("Wall_of_Text: {}".format(i))
-                Wall_of_Text = pickle.dumps(i)
-                #time.sleep(0.1)
-                self.clientsock.send(Wall_of_Text)
+            if self.data[2] == "SINGLE":
+                Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"SINGLE")
+                for i in Wall_of_Text:
+                    #print("Wall_of_Text: {}".format(i))
+                    Wall_of_Text = pickle.dumps(i)
+                    #time.sleep(0.1)
+                    self.clientsock.send(Wall_of_Text)
+                    
+            if self.data[2] == "GROUP":
+                Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"GROUP")
+                for i in Wall_of_Text:
+                    #print("Wall_of_Text: {}".format(i))
+                    Wall_of_Text = pickle.dumps(i)
+                    #time.sleep(0.1)
+                    self.clientsock.send(Wall_of_Text)
                 
             STOP = "STOP!"
             STOP = pickle.dumps(STOP)
@@ -643,12 +704,30 @@ class PersistentLogs():
             #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
             file2.write("\n{}: ".format(user)+msg+"\n")
             file2.close()
+            
+    def WriteToLogGroup2(self,user,msg,broadcast,name):
+        file1 = open('GroupLogs/{}.txt'.format(name), 'a', newline='')
+        #file1.write("YOU: "+msg+"\n") ORIGINAL
+        file1.write("\nYOU: "+msg+"\n")
+        file1.close()
+        file2 = open('GroupLogs/{}.txt'.format(name), 'a', newline='')
+        #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
+        file2.write("\n{}: ".format(user)+msg+"\n")
+        file2.close()       
+    
         
-    def ReadLog(self,user,name):
+    def ReadLog(self,user,name,state):
         text = []
-        with open('UserLogs/{}/{}.txt'.format(user,name), 'r', newline='') as f:
-            text = f.readlines()
-            return text
+        if state == "SINGLE":
+            print("Reading chat logs")
+            with open('UserLogs/{}/{}.txt'.format(user,name), 'r', newline='') as f:
+                text = f.readlines()
+                return text
+        if state == "GROUP":
+            print("Reading groupchat logs")
+            with open('UserLogs/{}/{}.txt'.format(user,name), 'r', newline='') as f:
+                text = f.readlines()
+                return text
         
     #def ReadLogGroup(self,user,groupName):
     #    text = ""

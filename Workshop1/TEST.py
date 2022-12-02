@@ -102,8 +102,11 @@ class Page_Login(tk.Frame):
         exit()   
         
     def key_pressed(self, event):
-        self.log_in()
-        self.Main_Window.withdraw()
+        stopyourself = self.log_in()
+        if stopyourself == "no":
+            print("no")
+        else:
+            self.Main_Window.withdraw()
         
     def clear_entry(self):
         self.username_entry_login.delete(0, 'end')
@@ -185,7 +188,9 @@ class Page_Login(tk.Frame):
             print("NOT LOGIN :(")
             self.title_label.config(text="Incorrect username and/or password!", fg="red", font=('arial',10,'bold'))
             self.clear_entry()
-            print("Login socket status: {}".format(self.se)) 
+            print("Login socket status: {}".format(self.se))
+            stopyourself = "no"
+            return  stopyourself
         
         
 class Page_UserRegister(tk.Frame):
@@ -496,13 +501,16 @@ class Page_Chat(tk.Frame):
         self.CanvasFriendList.configure(scrollregion=self.CanvasFriendList.bbox("all"))
         self.CanvasGroupList.configure(scrollregion=self.CanvasGroupList.bbox("all"))
       
-        ### ------------------ Section for main chat methods ------------------ ###    
     def on_closing(self):
         try:
             self.thread1.exit()
         except:
             exit()
         exit()
+    
+    def Thread_To_Keep_Loading_Groups(self): # DET HER SKAL GØRES!
+        print()    
+        ### ------------------ Section for main chat methods ------------------ ###    
     def reset_active_window(self):
         global Active_Window_AddUser
         global Active_Window_CreateGroup
@@ -951,6 +959,8 @@ class Page_Chat(tk.Frame):
             else:
                 print("USER ADDED IN GROUPCHAT")
                 self.usernameToGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
+                self.Update_Grouplist()
+                self.LoadGroups()
                 self.seY.close()
     
     def GroupChatWindow(self,group):
@@ -1007,7 +1017,10 @@ class Page_Chat(tk.Frame):
         global GroupListFriends
         GroupListFriends = self.LoadSocket.recv(BUFFER_SIZE)
         GroupListFriends = pickle.loads(GroupListFriends)
-        print("Users in group:",GroupListFriends)
+        print("Users in group1:",GroupListFriends)
+        if stupidusername in GroupListFriends:
+            GroupListFriends.remove(stupidusername)
+            print("Users in group2:",GroupListFriends)
         
         for i in GroupListFriends:
             print("i:",i)
@@ -1044,12 +1057,12 @@ class Page_Chat(tk.Frame):
 
         if GroupOrSingle == "single":
             # Data structure: [usernameLogin, usernameFriend, groupname]
-            self.data_string = pickle.dumps([stupidusername, userfriend])
+            self.data_string = pickle.dumps([stupidusername, userfriend, "SINGLE"])
             self.logssocket.send(self.data_string)
           
         if GroupOrSingle == "group":
             # Data structure: [usernameLogin, usernameFriend, groupname]
-            self.data_string = pickle.dumps([stupidusername, groupName])
+            self.data_string = pickle.dumps([stupidusername, groupName, "GROUP"])
             self.logssocket.send(self.data_string)
       
         while True:

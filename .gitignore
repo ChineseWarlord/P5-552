@@ -70,4 +70,5 @@ Workshop1/*.env
 Workshop1/UserData/*
 Workshop1/UserLogs/*
 Workshop1/UserFriends/*
-Workshop1/UserGroups/*
+Workshop1/Groups/*
+Workshop1/GroupLogs/*
