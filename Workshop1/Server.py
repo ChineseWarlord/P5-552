@@ -438,7 +438,7 @@ class ClientThread(threading.Thread):
             # Hvis socket + bruger er i den nye variabel
             # Skriv til persistent logs
             
-            
+            tempCount = 0
             while True:
                 print("-----------------------------------")
                 print("Users in socket list: \n{}".format(UserSockets))
@@ -493,47 +493,81 @@ class ClientThread(threading.Thread):
                 else:
                     for x in UserSockets:
                         # Data structure: [userlogin, msg, toUser, groupname, keyword]
+                        print(f"{tempCount} : What is x: {x}")
+                        tempCount += 1
+                        
                         if recv_data[4] == "SINGLE":
+                            print("==========================================")
+                            print("recv_data[4] == 'SINGLE'")
+                            print("Before if x[1] == recv_data[2]")
+                            print(f"User: {x[1]} == recv_data[2]: {recv_data[2]}")
+                            print(f"Socket x[0]: {x[0]}\nUser x[1]: {x[1]}")
                             if x[1] == recv_data[2]:
+                                print("Inside if x[1] == recv_data[2]")
+                                print(f"User: {x[1]} == recv_data[2]: {recv_data[2]}")
+                                print()
+                                print(f"Sending recv_string: {recv_string}")
+                                print(f"Socket x[0]: {x[0]}\nUser x[1]: {x[1]}")
                                 x[0].send(recv_string)
+                            print("==========================================")
+                            print()
+                            print("==========================================")
+                            print("Before if x[1] != recv_data[2]")
+                            print(f"User: {x[1]} != recv_data[2]: {recv_data[2]}")
+                            print(f"Socket x[0]: {x[0]}\nUser x[1]: {x[1]}")
                             if x[1] != recv_data[2]:
-                                x[0].send(recv_string)
+                                print("Inside if x[1] != recv_data[2]")
+                                print(f"User: {x[1]} != recv_data[2]: {recv_data[2]}")
+                                print()
+                                print(f"Sending recv_string: {recv_string}")
+                                print(f"Socket x[0]: {x[0]}\nUser x[1]: {x[1]}")
+                                #x[0].send(recv_string)
                                 logs.WriteToLog(recv_data[0],recv_data[1],recv_data[2])
-                                
+                            print("==========================================")
+                        
+                        """
+                        ORINGINAL FUNCTION FOR: for x in UserSockets:
                         if recv_data[4] == "GROUP":
                             print(f"recv_data from: [{recv_data[0]}] : {recv_data}")
-                            
-                            
                             tempList = recv_data[2]
                             print(f"tempList: [{tempList}]")
                             print(f"UserSockets: [{UserSockets}]")
                             
-                            for x1 in UserSockets:
-                                print(f"x1: {x1}")
-                                
-                            for x2 in tempList:
-                                print(f"x2: {x2}")
-                            """
-                            for y in recv_data[2]:
-                                print("What is y:",y)
-                                print("what is x[1]:",x[1])
+                            #logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
+                        """
+                    if recv_data[4] == "GROUP":
+                        print("UserSockets:",UserSockets)
+                        for x in UserSockets:
+                            print("recv_data[4] == 'Group'")
+                            GroupList = recv_data[2]
+                            print("GroupList:",GroupList)
+                            for y in GroupList:
+                                print("x (usersocket + id):",x)
+                                print("y (grouplist):",y)
+                                print()
+                                print()
+                                print("==========================================")
                                 if x[1] == y:
-                                    print("========================")
-                                    print("1 My socket:",x[0])
-                                    print("1 what is x[1]:",x[1])
-                                    print("========================")
+                                    print("Inside if x[1] == y")
+                                    print(f"User: {x[1]} == y: {y}")
+                                    print()
+                                    print(f"Sending recv_string: {recv_string}")
+                                    print(f"Socket x[0]: {x[0]}\nUser x[1]: {x[1]}")
                                     x[0].send(recv_string)
+                                print("==========================================")
+                                print()
+                                print("==========================================")
                                 if x[1] != y:
-                                    print("========================")
-                                    print("2 My socket:",x[0])
-                                    print("2 what is x[1]:",x[1])
-                                    print("========================")
-                                    x[0].send(recv_string)
-                            #[loginName,msg,['user1','user2'], PersistentLogName] 
-                            """
-                            logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
-                            
-                            
+                                    print("Inside if x[1] != y")
+                                    print(f"User: {x[1]} != y: {y}")
+                                    print()
+                                    print(f"Sending recv_string: {recv_string}")
+                                    print(f"Socket x[0]: {x[0]}\nUser x[1]: {x[1]}")
+                                    #x[0].send(recv_string)
+                                    #                Userlogin  ,Msg         ,toUser
+                                    #logs.WriteToLog(recv_data[0],recv_data[1],y     )
+                                print("==========================================")             
+                        logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
@@ -604,7 +638,7 @@ class PersistentLogs():
         #file1.write("YOU: "+msg+"\n") ORIGINAL
         file1.write("\nYOU: "+msg+"\n")
         file1.close()
-        for users in broadcast: 
+        for users in broadcast: # I STEDET FOR AT SKRIVE LOGS I TIL HVER PERSON - LAV EN MAPPE "GroupLogs/{groupname}.txt"
             file2 = open('UserLogs/{}/{}.txt'.format(users,name), 'a', newline='')
             #file2.write("{}: ".format(userfriend)+msg+"\n") ORIGINAL
             file2.write("\n{}: ".format(user)+msg+"\n")

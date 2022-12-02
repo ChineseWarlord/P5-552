@@ -34,6 +34,7 @@ BUFFER_SIZE = 10000
 
 stupidusername = ""
 userfriend = ""
+groupname = ""
 GroupListFriends = []
 UserDataLoaded = []
 Active_Window_AddUser = False
@@ -953,16 +954,26 @@ class Page_Chat(tk.Frame):
                 self.seY.close()
     
     def GroupChatWindow(self,group):
+        global groupname
+        groupname = group
         self.GROUPNAMETOSEND = group
         print("\nwhat is group name: {}".format(self.GROUPNAMETOSEND))
         
         self.GroupChatWindowUserFrame = tk.Frame(self.FrameChatWindow, bg="magenta",highlightbackground="green", highlightthickness=6 )
         self.GroupChatWindowUserFrame.pack(side=tk.TOP,fill='both',expand=True)  
         self.userchatLabel = tk.Label(self.GroupChatWindowUserFrame,text="{}'s Chat".format(self.GROUPNAMETOSEND),bg="magenta", fg="black",font=('arial',14,'bold'), borderwidth=1)
-        self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)  
+        self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3)
+        
+        self.MembersInGroup_Label = tk.Label(self.GroupChatWindowUserFrame,text="Members:",fg="black",font=('arial',10,'bold'), borderwidth=1)
+        self.MembersInGroup_Label.pack(side=tk.TOP,expand=False,anchor='center')
+        
+        self.MembersInGroup = tk.Text(self.GroupChatWindowUserFrame,height=1,width=70)
+        self.MembersInGroup.configure(state="disabled")
+        self.MembersInGroup.pack(side=tk.TOP,expand=False) 
+        self.MembersInGroup.propagate(0)
         
         self.GroupChatTestFrame = tk.Frame(self.GroupChatWindowUserFrame, bg="yellow",highlightbackground="green", highlightthickness=6,borderwidth=10,height=340,width=800)
-        self.GroupChatTestFrame.pack(side=tk.TOP)
+        self.GroupChatTestFrame.pack(side=tk.TOP,pady=5)
         self.GroupChatTestFrame.pack_propagate(0)
         
           
@@ -998,10 +1009,16 @@ class Page_Chat(tk.Frame):
         GroupListFriends = pickle.loads(GroupListFriends)
         print("Users in group:",GroupListFriends)
         
+        for i in GroupListFriends:
+            print("i:",i)
+            self.MembersInGroup.configure(state="normal")
+            self.MembersInGroup.insert("end",i+", ")
+        self.MembersInGroup.configure(state="disabled")
+        
         for x in GroupListFriends:
             print("Users:",x)
         
-        self.input_fieldGroup = tk.Entry(self.GroupChatWindowUserFrame,width=70,borderwidth=5,highlightbackground="black", highlightthickness=1)
+        self.input_fieldGroup = tk.Entry(self.GroupChatWindowUserFrame,width=50,borderwidth=5,highlightbackground="black", highlightthickness=1)
         self.input_fieldGroup.pack(side=tk.TOP,pady=1)
         self.input_fieldGroup.bind("<Return>",self.key_sendmsg_group)
         self.input_fieldGroup.focus()
@@ -1114,11 +1131,13 @@ class ReceiveData(threading.Thread):
         while True:
             recv_string = self.ds.recv(BUFFER_SIZE)
             recv_data = pickle.loads(recv_string)
-            print("recv_data:", recv_data)
             if recv_data == "CLOSE CONN":
                 break
             if self.state == "SINGLE":
                 print("Writing to SINGLE chat window...")
+                print("recv_data:", recv_data)
+                print(f"userfriend: {userfriend}")
+                print(f"recv_data[0]: {recv_data[0]}")
                 if userfriend == recv_data[0]:
                     self.chat.configure(state="normal")
                     msg = "{}: {}".format(recv_data[0],recv_data[1])
@@ -1130,7 +1149,11 @@ class ReceiveData(threading.Thread):
                     self.chat.see("end")
             if self.state == "GROUP":
                 print("Writing to GROUP chat window...")
-                if userfriend == recv_data[0]:
+                print("recv_data:", recv_data)
+                print(f"userfriend: {userfriend}")
+                print(f"groupname: {groupname}")
+                print(f"recv_data[3]: {recv_data[3]}")
+                if groupname == recv_data[3]:
                     self.chatgroup.configure(state="normal")
                     msg = "{}: {}".format(recv_data[0],recv_data[1])
                     print("====================")
