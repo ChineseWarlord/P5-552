@@ -32,11 +32,7 @@ LOGS_PORT = 2005
 LOAD_USER_PORT = 1000
 BUFFER_SIZE = 10000
 
-stupidusername = ""
-userfriend = ""
-groupname = ""
-GroupListFriends = []
-UserDataLoaded = []
+
 Active_Window_AddUser = False
 Active_Window_CreateGroup = False
 Active_Window_AddToGroup = False
@@ -52,7 +48,7 @@ class Page_Login(tk.Frame):
         #tk.Frame.__init__(self)
       
       
-        self.Main_Window = tk.Toplevel()
+        self.Main_Window = tk.Toplevel(self.root)
         self.Main_Window.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.Main_Window.title("Login Screen")
         self.Main_Window.resizable(width=False, height=False)
@@ -116,12 +112,12 @@ class Page_Login(tk.Frame):
         self.Main_Window.withdraw()
         self = Page_UserRegister()
         #root.add_page("Page_UserRegister",Page_UserRegister) 
-               
+                    
     def log_in(self):
         print("USER: "+self.UsernameLogin.get())
         print("PASS: "+self.PasswordLogin.get())
-        self.se = socket(AF_INET,SOCK_STREAM)
-        self.se.connect((SERVER_IP, VERIFY_PORT))
+        self.LoginSocket = socket(AF_INET,SOCK_STREAM)
+        self.LoginSocket.connect((SERVER_IP, VERIFY_PORT))
         data_User = self.UsernameLogin.get()
         data_Pass = self.PasswordLogin.get()
     
@@ -129,20 +125,42 @@ class Page_Login(tk.Frame):
 
         data_Check = "userlogin"
         self.data_string = pickle.dumps([data_User, data_Pass, data_Check,""])
-        self.se.send(self.data_string)
-        self.data = self.se.recv(BUFFER_SIZE)
+        self.LoginSocket.send(self.data_string)
+        self.data = self.LoginSocket.recv(BUFFER_SIZE)
         self.data = pickle.loads(self.data)
         print("From Server1: {}".format(self.data))
         self.data = self.data.split('#')
         print("From Server2: {}".format(self.data))
 
         if self.data[0] == "YES LOGIN!":
-            global stupidusername
+            self.AddUsersSocket_FRIEND = socket(AF_INET,SOCK_STREAM)
+            self.AddUsersSocket_GROUP = socket(AF_INET,SOCK_STREAM)
+            self.AddUsersSocket_TOGROUP = socket(AF_INET,SOCK_STREAM)
+    
+            self.LoadingSocket_FRIENDS = socket(AF_INET,SOCK_STREAM)
+            self.LoadingSocket_GROUP = socket(AF_INET,SOCK_STREAM)
+            self.LoadingSocket_GROUPCHAT = socket(AF_INET,SOCK_STREAM)
+            
+            self.AddUsersSocket_FRIEND.connect((SERVER_IP,VERIFY_PORT))
+            self.AddUsersSocket_GROUP.connect((SERVER_IP,VERIFY_PORT))
+            self.AddUsersSocket_TOGROUP.connect((SERVER_IP,VERIFY_PORT))
+            
+            self.LoadingSocket_FRIENDS.connect((SERVER_IP,LOAD_USER_PORT))
+            self.LoadingSocket_GROUP.connect((SERVER_IP,LOAD_USER_PORT))
+            self.LoadingSocket_GROUPCHAT.connect((SERVER_IP,LOAD_USER_PORT))
+            
+            self.ReadLogsSocket = socket(AF_INET,SOCK_STREAM)
+            self.ReadLogsSocket.connect((SERVER_IP,LOGS_PORT))
+            
+            
+        
             #print("OK LOGIN :)")
             #print(f"Username: {self.UsernameLogin.get()} \n" + f"Password: {self.PasswordLogin.get()}")
             self.title_label.config(text="Awesome Chat Program!", fg="black", font=('Arial',18,'bold'))
-            stupidusername = self.data[1]
-            #print("From Server stupidusername: {}".format(stupidusername))
+            
+            self.USERNAMELOGIN = self.data[1]
+            
+            
             self.clear_entry()
             self.UserChatSocket1 = socket(AF_INET,SOCK_STREAM)
             self.UserChatSocket1.connect((SERVER_IP, SERVER_PORT))
@@ -155,18 +173,17 @@ class Page_Login(tk.Frame):
             #print("From server data: {}".format(data_list))
             #print("From server   OK: {}".format(data_list[0]))
             if data_list[0]=="OK":
-               NEW_PORT=data_list[3]
-               print(NEW_PORT)
-               self.UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
-               self.UserChatSocket2.connect((SERVER_IP, NEW_PORT))
-               self.event = threading.Event()
-               self.thread1 = SendData(self.UserChatSocket2,stupidusername)
-               self.thread2 = ReceiveData(self.UserChatSocket2, self.event)
-               self.thread2.start()
-               #root.add_page("Page_Chat",Page_Chat, self.thread1, self.thread2, self.UserChatSocket1, self.UserChatSocket2)
-               self.Main_Window.withdraw()
-               Page_Chat(self.thread1, self.thread2, self.UserChatSocket1, self.UserChatSocket2)
-               self.se.close()
+                NEW_PORT=data_list[3]
+                print(NEW_PORT)
+                self.UserChatSocket2 = socket(AF_INET,SOCK_STREAM)
+                self.UserChatSocket2.connect((SERVER_IP, NEW_PORT))
+                self.thread1 = SendData(self.UserChatSocket2,self.USERNAMELOGIN)
+                self.thread2 = ReceiveData(self.UserChatSocket2)
+                self.thread2.start()
+                #root.add_page("Page_Chat",Page_Chat, self.thread1, self.thread2, self.UserChatSocket1, self.UserChatSocket2)
+                self.Main_Window.withdraw()
+                Page_Chat(self.USERNAMELOGIN,self.thread1, self.thread2, self.UserChatSocket1, self.UserChatSocket2, self.AddUsersSocket_FRIEND,self.AddUsersSocket_GROUP,self.AddUsersSocket_TOGROUP,self.ReadLogsSocket,self.LoadingSocket_FRIENDS,self.LoadingSocket_GROUP,self.LoadingSocket_GROUPCHAT)
+                #self.LoginSocket.close()
             else:
                 print("Reply from server: server is full. Retry later.")
         if self.data[0] == "NO LOGIN!":
@@ -175,7 +192,7 @@ class Page_Login(tk.Frame):
             self.clear_entry()
             #print("Login socket status: {}".format(self.se))
             stopyourself = "no"
-            return  stopyourself
+            return  stopyourself 
         
         
 class Page_UserRegister(tk.Frame):
@@ -272,17 +289,35 @@ class Page_UserRegister(tk.Frame):
             print("Register socket status: {}".format(self.se))            
 
 
-class Page_Chat(tk.Frame):
-    def __init__(self,thread1,thread2, socketlogin, socketchat):
+class Page_Chat(LoadingChatData,tk.Frame):
+    def __init__(self,UsernameLogin,thread1,thread2, socket1, socket2, socket3, socket4, socket5,socket6,socket7,socket8,socket9):
         # Same as creating root window, withdrawing it, and running mainloop()
         tk.Frame.__init__(self)
 
+        self.UsernameLogin = UsernameLogin
         self.thread1 = thread1
         self.thread2 = thread2
-        self.socketlogin = socketlogin
-        self.socketchat = socketchat
+        self.socketlogin = socket1
+        self.socketchat = socket2
+        
+        self.AddUsersSocket_FRIEND = socket3
+        self.AddUsersSocket_GROUP = socket4
+        self.AddUsersSocket_TOGROUP = socket5
+        
+        self.LoadingSocket_FRIENDS = socket6
+        self.LoadingSocket_GROUP = socket7
+        self.LoadingSocket_GROUPCHAT = socket8
+        
+        self.ReadLogsSocket = socket9
+        
+        self.UserFriend = ""
+        self.groupname = ""
+        self.GroupListFriends = []
 
-        #self.tkraise()
+        self.thread3 = LoadingChatData(self.UsernameLogin,self.AddUsersSocket_FRIEND,self.AddUsersSocket_GROUP,self.FrameFriendListCanvas,self.FrameGroupListCanvas)
+        self.thread3.join()
+        
+        self.AddingChatData = AddingChatData(self.UsernameLogin, self.LoadingSocket_FRIENDS,self.LoadingSocket_GROUP,self.LoadingSocket_GROUPCHAT)
 
         self.Main_Window = tk.Toplevel()
         self.Main_Window.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -306,7 +341,7 @@ class Page_Chat(tk.Frame):
 
         # Frame Title label
         self.chat_title = tk.Label(self.frame_main, 
-                                   text=f"Welcome {stupidusername}!", 
+                                   text=f"Welcome {self.UsernameLogin}!", 
                                    font=('Arial',24,'bold'),
                                    bg="black", fg="white")
         self.chat_title.pack(side=tk.TOP,fill=tk.X, expand=False)
@@ -619,76 +654,13 @@ class Page_Chat(tk.Frame):
         self.Usernameadd_entry.bind("<Return>",lambda event, a = "Add users":self.Key_Pressed(a))
         self.Usernameadd_entry.focus()
             
-        self.AddUser_Button = tk.Button(self.FrameAddUser_Button, text="Add user",command=lambda : [self.addUserFriend(),self.Clear_Entry("Add users")], bg="#211A52", fg = "white")
+        self.AddUser_Button = tk.Button(self.FrameAddUser_Button, text="Add user",command=lambda : [AddingChatData.addUserFriend(self.UsernameAdd.get(),self.AddUser_label,self.usernameGroup_tryadd_label,self.usernameToGroup_tryadd_label,self.usernameGroup_Menu,self.AddUsernameToGroup_Menu,self.Data_UserFriends,self.Data_Groups,self.GroupNameAddGroup),self.Clear_Entry("Add users")], bg="#211A52", fg = "white")
         self.AddUser_Button.pack(side=tk.LEFT)
         self.AddUser_EXIT_Button = tk.Button(self.FrameAddUser_Button, text="Return",command=lambda : [self.Remove_Windows("Add user window")], bg="#211A52", fg = "white")
         self.AddUser_EXIT_Button.pack(side=tk.RIGHT)
-    
-    def addUserFriend(self):
-        # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
-        self.se = socket(AF_INET,SOCK_STREAM)
-        self.se.connect((SERVER_IP, VERIFY_PORT))
-        
-        TryToAddUser = self.UsernameAdd.get()
-        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-        self.data_string = pickle.dumps([TryToAddUser,stupidusername, "UserAdd", ""])
-        self.se.send(self.data_string)
-        datax = self.se.recv(BUFFER_SIZE)
-        datax = pickle.loads(datax)
-        print("From Server: {}".format(datax))
-        datax = datax.split('#')
-        print("From Server2: {}".format(datax))
-        print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
-        
-        if datax[1] == TryToAddUser:
-            print("USER ADDED")
-            #self.Add_User_Frame.withdraw()
-            self.Update_Friendslist()
-            self.AddUser_label.config(text="User added to friends list", fg="#211A52", font=('arial',10,'bold'))
-            self.LoadUserFriends()
-            #self.se.close()
-        if datax[0] == "ALREADY IN FRIENDLIST!":
-            print("USER ALREADY IN FRIENDLIST")
-            shit1 = "ALREADY IN FRIENDLIST"
-            self.AddUser_label.config(text="User already in friends list", fg="red", font=('arial',10,'bold'))
-            #self.se.close()
-        if datax[0] == "TRIED TO ADD YOURSELF!":
-            shit2 = "TRIED TO ADD YOURSELF"
-            print("TRIED TO ADD YOURSELF!")
-            self.AddUser_label.config(text="Tried to add yourself!", fg="red", font=('arial',10,'bold'))
-            #self.se.close()
-        if datax[0] == "USER DOES NOT EXIST!":
-            shit3 = "USER NOT EXIST"
-            self.AddUser_label.config(text="User does not exist!", fg="red", font=('arial',10,'bold'))
-        
-    def LoadUserFriends(self):
-        # When logged in, connect to server and load USER_DATA into chat menu window
-        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
-        
-        self.LoadUserFriendsSocket = socket(AF_INET,SOCK_STREAM)
-        self.LoadUserFriendsSocket.connect((SERVER_IP, LOAD_USER_PORT))
-        
-        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-        self.Data_string = pickle.dumps(["","",stupidusername,"Load_Users"])
-        self.LoadUserFriendsSocket.send(self.Data_string)
-        
-        self.Data_UserFriends = self.LoadUserFriendsSocket.recv(BUFFER_SIZE)
-        self.Data_UserFriends = pickle.loads(self.Data_UserFriends)
-        print("Users loaded from server: {}".format(self.Data_UserFriends))
-        
-        count = 0
-        for x in self.Data_UserFriends:
-            self.UserLoaded_Button = tk.Button(self.FrameFriendListCanvas,text=f"{self.Data_UserFriends[count]}", bg="black", fg="white",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.Data_UserFriends[count]:[self.Remove_Windows("User chat window"),self.UserChatWindow(name)])
-            
-            name = self.Data_UserFriends[count]
-            print("This is name: {}".format(name))
-            print("Username of friends: {}".format(self.Data_UserFriends[count]))  
-            self.UserLoaded_Button.pack(anchor="nw",pady=3)            
-            count += 1
-            
+ 
     def UserChatWindow(self,friend):
-      global userfriend
-      userfriend = friend
+      self.UserFriend = friend
       
       #self.tkraise()
       
@@ -728,8 +700,8 @@ class Page_Chat(tk.Frame):
       
       # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP]
       # set structure: [chatboxSINGLE, chatboxGROUP, state]
-      self.thread1.set(self.chat_box,self.input_field, "","")
-      self.thread2.set(self.chat_box,"","SINGLE")
+      self.thread1.set(self.chat_box,self.input_field, "","",self.UserFriend)
+      self.thread2.set(self.chat_box,"","SINGLE",self.UserFriend,self.groupname)
       
       self.button = ttk.Button(self.UserChatWindowFrame, text='Send')
       self.button['command'] = self.send_message_button
@@ -779,71 +751,7 @@ class Page_Chat(tk.Frame):
         
         self.Add_User_EXIT_ButtonGroup = tk.Button(self.FrameaddGroup_Button, text="EXIT",command=lambda : [self.Remove_Windows("Create group window")], bg="#211A52", fg = "white")
         self.Add_User_EXIT_ButtonGroup.pack(side=tk.RIGHT)
-        
-    def addUserGroup(self):
-        if not self.GroupNameAddGroup.get() :
-            self.usernameGroup_tryadd_label.config(text="Group name is missing!", fg="red", font=('arial',10,'bold'))
-        
-        if self.GroupNameAddGroup.get():
-            self.seX = socket(AF_INET,SOCK_STREAM)
-            self.seX.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self.seX.connect((SERVER_IP, VERIFY_PORT))
-
-            GroupNameAdd = self.GroupNameAddGroup.get()
-            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-            #self.data_string = pickle.dumps([GroupNameAdd,UserAddToGroup,stupidusername, "UserAddGroup"])
-            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddGroup",""])
-            self.seX.send(self.data_string)
-            datax = self.seX.recv(BUFFER_SIZE)
-            datax = pickle.loads(datax)
-            print("From Server: {}".format(datax))
-            datax = datax.split('#')
-            print("From Server2: {}".format(datax))
-            print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
-
-            if datax[0] == "GROUP CREATED":
-                print("GROUP CREATED")
-                self.usernameGroup_tryadd_label.config(text="Group created!", fg="green", font=('arial',10,'bold'))
-                self.Update_Grouplist()
-                self.LoadGroups()
-                #####self.Add_UserGroup_Frame.withdraw()
-                #self.removeUsers()
-                #self.LoadUserFriends()
-                self.seX.close()
-            if datax[0] == "GROUP ALREADY EXISTS":
-                print("GROUP ALREADY EXISTS")
-                self.usernameGroup_tryadd_label.config(text="Group already exists!", fg="red", font=('arial',10,'bold'))
-                self.seX.close()
-                
-    def LoadGroups(self):
-        # When logged in, connect to server and load USER_DATA into chat menu window
-        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
-        
-        self.LoadGroupsSocket = socket(AF_INET,SOCK_STREAM)
-        self.LoadGroupsSocket.connect((SERVER_IP, LOAD_USER_PORT))
-        
-        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-        self.Data_string = pickle.dumps(["","",stupidusername,"Load_Groups"])
-        self.LoadGroupsSocket.send(self.Data_string)
-        
-        self.Data_Groups = self.LoadGroupsSocket.recv(BUFFER_SIZE)
-        self.Data_Groups = pickle.loads(self.Data_Groups)
-        print("Groups loaded from server: {}".format(self.Data_Groups))
-        
-        count = 0
-        if self.Data_Groups == "No group found":
-            print("No groups loaded from server")
-        else:
-            for x in self.Data_Groups:
-                self.LoadedGroupLabel = tk.Button(self.FrameGroupListCanvas,text=f"{self.Data_Groups[count]}", bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.Data_Groups[count]:[self.Remove_Windows("User chat window"),self.GroupChatWindow(name)])
-
-                name = self.Data_Groups[count]
-                print("This is name: {}".format(name))
-                print("Group name: {}".format(self.Data_Groups[count]))  
-                self.LoadedGroupLabel.pack(anchor="nw",pady=3)
-                count += 1
-            print("All Group Names:", self.Data_Groups)
-    
+ 
     def AddToGroup(self):
         self.chat_title.configure(text="Add User to Group Chat", 
                                    font=('Arial',18,'bold'),
@@ -903,50 +811,9 @@ class Page_Chat(tk.Frame):
     def get_username(self,event):
         #print("user name you clicked:",self.AddUsernameToGroup_Menu.get())
         self.GetUserName = self.AddUsernameToGroup_Menu.get()
-          
-    def addUserToGroup(self):
-        if self.usernameGroup_Menu.get() == "Choose a group":
-            self.usernameToGroup_tryadd_label.config(text="No group was chosen!", fg="red", font=('arial',10,'bold'))
-        
-        if self.AddUsernameToGroup_Menu.get() == "Choose a user":
-            self.usernameToGroup_tryadd_label.config(text="No user was chosen!", fg="red", font=('arial',10,'bold'))
-       
-        if self.usernameGroup_Menu.get() == "Choose a group" and self.AddUsernameToGroup_Menu.get() == "Choose a user":
-             self.usernameToGroup_tryadd_label.config(text="No group or user was chosen !", fg="red", font=('arial',10,'bold'))
-             
-        if self.AddUsernameToGroup_Menu.get() in self.Data_UserFriends and self.usernameGroup_Menu.get() in self.Data_Groups:
-            print("User in friendlist!")
             
-            self.seY = socket(AF_INET,SOCK_STREAM)
-            self.seY.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self.seY.connect((SERVER_IP, VERIFY_PORT))
-
-            GroupNameAdd = self.usernameGroup_Menu.get()
-            UserAddToGroup = self.AddUsernameToGroup_Menu.get()
-            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-            self.data_string = pickle.dumps([stupidusername,GroupNameAdd,"UserAddToGroup", UserAddToGroup])
-            self.seY.send(self.data_string)
-            datax = self.seY.recv(BUFFER_SIZE)
-            datax = pickle.loads(datax)
-            print("From Server: {}".format(datax))
-            datax = datax.split('#')
-            print("From Server2: {}".format(datax))
-            print("datax[0]: {}\ndatax[1]: {}:".format(datax[0],datax[1]))
-
-            if datax[0] == "USER ALREADY IN GROUPCHAT":
-                print("USER ALREADY IN GROUPCHAT")
-                self.usernameToGroup_tryadd_label.config(text="User already in groupchat!", fg="red", font=('arial',10,'bold'))
-                self.seY.close()
-            else:
-                print("USER ADDED IN GROUPCHAT")
-                self.usernameToGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
-                self.Update_Grouplist()
-                self.LoadGroups()
-                self.seY.close()
-    
     def GroupChatWindow(self,group):
-        global groupname
-        groupname = group
+        self.groupname = group
         self.GROUPNAMETOSEND = group
         print("\nwhat is group name: {}".format(self.GROUPNAMETOSEND))
         
@@ -990,26 +857,26 @@ class Page_Chat(tk.Frame):
         self.Groupchat_box['yscrollcommand'] = scrollbarGroup.set
         
         # Load groupname users to msg
-        self.LoadSocket = socket(AF_INET,SOCK_STREAM)
-        self.LoadSocket.connect((SERVER_IP, LOAD_USER_PORT))
-        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
-        self.data_string = pickle.dumps([self.GROUPNAMETOSEND,"",stupidusername,"Load_Group_Users"])
-        self.LoadSocket.send(self.data_string)
-        global GroupListFriends
-        GroupListFriends = self.LoadSocket.recv(BUFFER_SIZE)
-        GroupListFriends = pickle.loads(GroupListFriends)
-        print("Users in group1:",GroupListFriends)
-        if stupidusername in GroupListFriends:
-            GroupListFriends.remove(stupidusername)
-            print("Users in group2:",GroupListFriends)
+        #self.LoadSocket = socket(AF_INET,SOCK_STREAM)
+        #self.LoadSocket.connect((SERVER_IP, LOAD_USER_PORT))
         
-        for i in GroupListFriends:
+        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+        self.data_string = pickle.dumps([self.GROUPNAMETOSEND,"",self.UsernameLogin,"Load_Group_Users"])
+        self.LoadingSocket.send(self.data_string)
+        self.GroupListFriends = self.LoadingSocket.recv(BUFFER_SIZE)
+        self.GroupListFriends = pickle.loads(self.GroupListFriends)
+        print("Users in group1:",self.GroupListFriends)
+        if self.UsernameLogin in self.GroupListFriends:
+            self.GroupListFriends.remove(self.UsernameLogin)
+            print("Users in group2:",self.GroupListFriends)
+        
+        for i in self.GroupListFriends:
             print("i:",i)
             self.MembersInGroup.configure(state="normal")
             self.MembersInGroup.insert("end",i+", ")
         self.MembersInGroup.configure(state="disabled")
         
-        for x in GroupListFriends:
+        for x in self.GroupListFriends:
             print("Users:",x)
         
         self.input_fieldGroup = tk.Entry(self.GroupChatWindowUserFrame,width=50,borderwidth=5,highlightbackground="black", highlightthickness=1)
@@ -1019,15 +886,14 @@ class Page_Chat(tk.Frame):
         
         # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP]
         # set structure: [chatboxSINGLE, chatboxGROUP, state]
-        self.thread1.set("","", self.Groupchat_box, self.input_fieldGroup)
-        self.thread2.set("", self.Groupchat_box, "GROUP")
+        self.thread1.set("","", self.Groupchat_box, self.input_fieldGroup,self.UserFriend)
+        self.thread2.set("", self.Groupchat_box, "GROUP",self.UserFriend,self.groupname)
         
         self.buttonGroup = ttk.Button(self.GroupChatWindowUserFrame, text='Send')
         self.buttonGroup['command'] = self.send_message_button_group
         self.buttonGroup.pack()
     
     def ReadLogs(self,state,groupname):
-        global userfriend
         GroupOrSingle = state
         groupName = groupname
         self.storeddata = []
@@ -1038,12 +904,12 @@ class Page_Chat(tk.Frame):
 
         if GroupOrSingle == "single":
             # Data structure: [usernameLogin, usernameFriend, groupname]
-            self.data_string = pickle.dumps([stupidusername, userfriend, "SINGLE"])
+            self.data_string = pickle.dumps([self.UsernameLogin, self.UserFriend, "SINGLE"])
             self.logssocket.send(self.data_string)
           
         if GroupOrSingle == "group":
             # Data structure: [usernameLogin, usernameFriend, groupname]
-            self.data_string = pickle.dumps([stupidusername, groupName, "GROUP"])
+            self.data_string = pickle.dumps([self.UsernameLogin, groupName, "GROUP"])
             self.logssocket.send(self.data_string)
       
         while True:
@@ -1067,19 +933,216 @@ class Page_Chat(tk.Frame):
         self.thread1.send_to_group(self.GROUPNAMETOSEND)
         self.input_fieldGroup.delete(0, 'end')
          
+ 
+class LoadingChatData(threading.Thread):
+    def __init__(self,UsernameLogin,socket1, socket2, CanvasFrameFriend, CanvasFrameGroup):
+        threading.Thread.__init__(self)
+        
+        self.UsernameLogin = UsernameLogin
+        self.LoadChatSocket = socket1
+        self.LoadGroupSocket = socket2
+        
+        self.FrameFriendListCanvas = CanvasFrameFriend
+        self.FrameGroupListCanvas = CanvasFrameGroup
+        
+        
+    def LoadUserFriends(self):
+        # When logged in, connect to server and load USER_DATA into chat menu window
+        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
+        
+        #self.LoadUserFriendsSocket = socket(AF_INET,SOCK_STREAM)  # ORIGINAL
+        #self.LoadUserFriendsSocket.connect((SERVER_IP, LOAD_USER_PORT)) # ORIGINAL
+        
+        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+        self.Data_string = pickle.dumps(["","",self.UsernameLogin,"Load_Users"])
+        #self.LoadUserFriendsSocket.send(self.Data_string) # ORIGINAL
+        self.LoadChatSocket.send(self.Data_string)
+        
+        #self.Data_UserFriends = self.LoadUserFriendsSocket.recv(BUFFER_SIZE) # ORIGINAL
+        self.Data_UserFriends = self.LoadChatSocket.recv(BUFFER_SIZE)
+        self.Data_UserFriends = pickle.loads(self.Data_UserFriends)
+        print("Users loaded from server: {}".format(self.Data_UserFriends))
+        
+        count = 0
+        for x in self.Data_UserFriends:
+            self.UserLoaded_Button = tk.Button(self.FrameFriendListCanvas,text=f"{self.Data_UserFriends[count]}", bg="black", fg="white",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.Data_UserFriends[count]:[Page_Chat.Remove_Windows("User chat window"),Page_Chat.UserChatWindow(name)])
+            
+            name = self.Data_UserFriends[count]
+            print("This is name: {}".format(name))
+            print("Username of friends: {}".format(self.Data_UserFriends[count]))  
+            self.UserLoaded_Button.pack(anchor="nw",pady=3)            
+            count += 1
+            
+           
+    def LoadGroups(self):
+        # When logged in, connect to server and load USER_DATA into chat menu window
+        # Make added user clickable and when clicked connect to chat server and add chat window to chat window frame
+        
+        #self.LoadGroupsSocket = socket(AF_INET,SOCK_STREAM)
+        #self.LoadGroupsSocket.connect((SERVER_IP, LOAD_USER_PORT))
+        
+        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+        self.Data_string = pickle.dumps(["","",self.UsernameLogin,"Load_Groups"])
+        self.LoadGroupSocket.send(self.Data_string)
+        
+        self.Data_Groups = self.LoadGroupSocket.recv(BUFFER_SIZE)
+        self.Data_Groups = pickle.loads(self.Data_Groups)
+        print("Groups loaded from server: {}".format(self.Data_Groups))
+        
+        count = 0
+        if self.Data_Groups == "No group found":
+            print("No groups loaded from server")
+        else:
+            for x in self.Data_Groups:
+                self.LoadedGroupLabel = tk.Button(self.FrameGroupListCanvas,text=f"{self.Data_Groups[count]}", bg="black", fg="magenta",font=('arial',10,'bold'), borderwidth=1,anchor="center", command=lambda name=self.Data_Groups[count]:[Page_Chat.Remove_Windows("User chat window"),Page_Chat.GroupChatWindow(name)])
+
+                name = self.Data_Groups[count]
+                print("This is name: {}".format(name))
+                print("Group name: {}".format(self.Data_Groups[count]))  
+                self.LoadedGroupLabel.pack(anchor="nw",pady=3)
+                count += 1
+            print("All Group Names:", self.Data_Groups)
+    
+
+class AddingChatData():
+    def __init__(self, UsernameLogin,socket1, socket2, socket3):
+        self.UsernameLogin = UsernameLogin
+        self.AddUsersSocket_FRIEND = socket1
+        self.AddUsersSocket_GROUP = socket2
+        self.AddUsersSocket_TOGROUP = socket3
+      
+    def addUserFriend(self,TryToAddUser,adduserlabel,usergrouplabel,usertogrouplabel,usergroupmenu,usertogroupmenu, datafriends,datagroups,groupnameaddgroup):
+        # After clicking add user button - connect to server and add user to USER_DATA (Which holds data of logged in user)
+        #self.se = socket(AF_INET,SOCK_STREAM) # ORIGINAL
+        #self.se.connect((SERVER_IP, VERIFY_PORT)) # ORIGINAL
+        
+        self.AddUser_label = adduserlabel
+        self.usernameGroup_tryadd_label = usergrouplabel
+        self.usernameToGroup_tryadd_label = usertogrouplabel
+        self.usernameGroup_Menu = usergroupmenu
+        self.AddUsernameToGroup_Menu = usertogroupmenu
+        self.Data_UserFriends = datafriends
+        self.Data_Groups = datagroups
+        self.GroupNameAddGroup = groupnameaddgroup
+        
+        
+        # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+        self.data_string = pickle.dumps([TryToAddUser,self.UsernameLogin, "UserAdd", ""])
+        #self.se.send(self.data_string) # ORIGINAL
+        self.AddUsersSocket_FRIEND.send(self.data_string)
+        #datax = self.se.recv(BUFFER_SIZE) # ORIGINAL
+        datax = self.AddUsersSocket_FRIEND.recv(BUFFER_SIZE)
+        datax = pickle.loads(datax)
+        print("From Server: {}".format(datax))
+        datax = datax.split('#')
+        print("From Server2: {}".format(datax))
+        print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
+        
+        if datax[1] == TryToAddUser:
+            print("USER ADDED")
+            #self.Add_User_Frame.withdraw()
+            Page_Chat.Update_Friendslist()
+            self.AddUser_label.config(text="User added to friends list", fg="#211A52", font=('arial',10,'bold'))
+            LoadingChatData.LoadUserFriends()
+            #self.se.close()
+        if datax[0] == "ALREADY IN FRIENDLIST!":
+            print("USER ALREADY IN FRIENDLIST")
+            shit1 = "ALREADY IN FRIENDLIST"
+            self.AddUser_label.config(text="User already in friends list", fg="red", font=('arial',10,'bold'))
+            #self.se.close()
+        if datax[0] == "TRIED TO ADD YOURSELF!":
+            shit2 = "TRIED TO ADD YOURSELF"
+            print("TRIED TO ADD YOURSELF!")
+            self.AddUser_label.config(text="Tried to add yourself!", fg="red", font=('arial',10,'bold'))
+            #self.se.close()
+        if datax[0] == "USER DOES NOT EXIST!":
+            shit3 = "USER NOT EXIST"
+            self.AddUser_label.config(text="User does not exist!", fg="red", font=('arial',10,'bold'))
+        
+       
+    def addUserGroup(self):
+        if not self.GroupNameAddGroup.get() :
+            self.usernameGroup_tryadd_label.config(text="Group name is missing!", fg="red", font=('arial',10,'bold'))
+        
+        if self.GroupNameAddGroup.get():
+            #self.seX = socket(AF_INET,SOCK_STREAM) #ORIGINAL
+            #self.seX.connect((SERVER_IP, VERIFY_PORT)) # ORIGINAL
+
+            GroupNameAdd = self.GroupNameAddGroup.get()
+            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+            self.data_string = pickle.dumps([self.UsernameLogin,GroupNameAdd,"UserAddGroup",""])
+            self.AddUsersSocket_GROUP.send(self.data_string)
+            datax = self.AddUsersSocket_GROUP.recv(BUFFER_SIZE)
+            datax = pickle.loads(datax)
+            print("From Server: {}".format(datax))
+            datax = datax.split('#')
+            print("From Server2: {}".format(datax))
+            print("datax[0]: {}\ndatax[1]: {}".format(datax[0],datax[1]))
+
+            if datax[0] == "GROUP CREATED":
+                print("GROUP CREATED")
+                self.usernameGroup_tryadd_label.config(text="Group created!", fg="green", font=('arial',10,'bold'))
+                Page_Chat.Update_Grouplist()
+                LoadingChatData.LoadGroups()
+                #####self.Add_UserGroup_Frame.withdraw()
+                #self.removeUsers()
+                #self.LoadUserFriends()
+                #self.seX.close()
+            if datax[0] == "GROUP ALREADY EXISTS":
+                print("GROUP ALREADY EXISTS")
+                self.usernameGroup_tryadd_label.config(text="Group already exists!", fg="red", font=('arial',10,'bold'))
+     
          
+    def addUserToGroup(self):
+        if self.usernameGroup_Menu.get() == "Choose a group":
+            self.usernameToGroup_tryadd_label.config(text="No group was chosen!", fg="red", font=('arial',10,'bold'))
+        
+        if self.AddUsernameToGroup_Menu.get() == "Choose a user":
+            self.usernameToGroup_tryadd_label.config(text="No user was chosen!", fg="red", font=('arial',10,'bold'))
+       
+        if self.usernameGroup_Menu.get() == "Choose a group" and self.AddUsernameToGroup_Menu.get() == "Choose a user":
+             self.usernameToGroup_tryadd_label.config(text="No group or user was chosen !", fg="red", font=('arial',10,'bold'))
+             
+        if self.AddUsernameToGroup_Menu.get() in self.Data_UserFriends and self.usernameGroup_Menu.get() in self.Data_Groups:
+            print("User in friendlist!")
+            
+            #self.seY = socket(AF_INET,SOCK_STREAM)
+            #self.seY.connect((SERVER_IP, VERIFY_PORT))
+
+            GroupNameAdd = self.usernameGroup_Menu.get()
+            UserAddToGroup = self.AddUsernameToGroup_Menu.get()
+            # Data structure: [GroupName,UserToAdd,LoginName,CHECKDATA]
+            self.data_string = pickle.dumps([self.UsernameLogin,GroupNameAdd,"UserAddToGroup", UserAddToGroup])
+            self.AddUsersSocket_TOGROUP.send(self.data_string)
+            datax = self.AddUsersSocket_TOGROUP.recv(BUFFER_SIZE)
+            datax = pickle.loads(datax)
+            print("From Server: {}".format(datax))
+            datax = datax.split('#')
+            print("From Server2: {}".format(datax))
+            print("datax[0]: {}\ndatax[1]: {}:".format(datax[0],datax[1]))
+
+            if datax[0] == "USER ALREADY IN GROUPCHAT":
+                print("USER ALREADY IN GROUPCHAT")
+                self.usernameToGroup_tryadd_label.config(text="User already in groupchat!", fg="red", font=('arial',10,'bold'))
+                #self.seY.close()
+            else:
+                print("USER ADDED IN GROUPCHAT")
+                self.usernameToGroup_tryadd_label.config(text="User added to groupchat!", fg="green", font=('arial',10,'bold'))
+                Page_Chat.Update_Grouplist()
+                LoadingChatData.LoadGroups()
+     
+
 class SendData():
     def __init__(self,tcp_socket, user):
         self.ds=tcp_socket
         self.uu=user
     def send(self):
-        global userfriend
         send_data = self.input.get()
         print("SINGLE - send data: {}".format(send_data))
         print(len(send_data))
         if len(send_data) > 1:
             # Data structure: [user, msg, msgtofriend, groupname, keyword]
-            chat_data=[self.uu,send_data, userfriend,"","SINGLE"]
+            chat_data=[self.uu,send_data, self.UserFriend,"","SINGLE"]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             self.chat.configure(state="normal")
@@ -1088,13 +1151,12 @@ class SendData():
             self.chat.see("end") 
                 
     def send_to_group(self,groupname):
-        global GroupListFriends
         send_data = self.input2.get()
         print("GROUP - send data: {}".format(send_data))
         print(len(send_data))
         if len(send_data) > 1:
             # Data structure: [user, msg, msgtofriend, groupname, keyword]
-            chat_data=[self.uu,send_data, GroupListFriends, groupname, "GROUP"]
+            chat_data=[self.uu,send_data, self.GroupListFriends, groupname, "GROUP"]
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             self.chatgroup.configure(state="normal")
@@ -1109,18 +1171,18 @@ class SendData():
             print("Connection closed.")
             
     # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP, state]
-    def set(self, chat_box,input,chat_box_group,input2):
+    def set(self, chat_box,input,chat_box_group,input2,UserFriend):
         self.chat = chat_box
         self.input = input
         self.chatgroup = chat_box_group
         self.input2 = input2
+        self.UserFriend = UserFriend
 
 
 class ReceiveData(threading.Thread):
-    def __init__(self,tcp_socket, event):
+    def __init__(self,tcp_socket):
         threading.Thread.__init__(self)
         self.ds=tcp_socket
-        self.event = event
     def run(self):
         while True:
             recv_string = self.ds.recv(BUFFER_SIZE)
@@ -1130,9 +1192,9 @@ class ReceiveData(threading.Thread):
             if self.state == "SINGLE":
                 print("Writing to SINGLE chat window...")
                 print("recv_data:", recv_data)
-                print(f"userfriend: {userfriend}")
+                print(f"self.UserFriend: {self.UserFriend}")
                 print(f"recv_data[0]: {recv_data[0]}")
-                if userfriend == recv_data[0]:
+                if self.UserFriend == recv_data[0]:
                     self.chat.configure(state="normal")
                     msg = "{}: {}".format(recv_data[0],recv_data[1])
                     print("====================")
@@ -1144,10 +1206,10 @@ class ReceiveData(threading.Thread):
             if self.state == "GROUP":
                 print("Writing to GROUP chat window...")
                 print("recv_data:", recv_data)
-                print(f"userfriend: {userfriend}")
-                print(f"groupname: {groupname}")
+                print(f"self.UserFriend: {self.UserFriend}")
+                print(f"groupname: {self.groupname}")
                 print(f"recv_data[3]: {recv_data[3]}")
-                if groupname == recv_data[3]:
+                if self.groupname == recv_data[3]:
                     self.chatgroup.configure(state="normal")
                     msg = "{}: {}".format(recv_data[0],recv_data[1])
                     print("====================")
@@ -1157,11 +1219,12 @@ class ReceiveData(threading.Thread):
                     self.chatgroup.configure(state="disabled")
                     self.chatgroup.see("end")
     # set structure: [chatboxSINGLE, chatboxGROUP, state]
-    def set(self,chat_box,chat_box_group,state):
+    def set(self,chat_box,chat_box_group,state,UserFriend,groupname):
         self.state = state
         self.chat = chat_box
-        self.chatgroup = chat_box_group  
-
+        self.chatgroup = chat_box_group
+        self.UserFriend = UserFriend
+        self.groupname = groupname
 
 
 if __name__=="__main__":

@@ -78,8 +78,10 @@ class VerifyThread(threading.Thread):
             self.data2.pop(2)
             print("DELETED test: ", self.data2)
             if self.Data_Check == "userregister":
+                print("1 Register socket status: {}".format(self.conn)) 
                 self.Check_User_Register()
                 #self.conn.close()
+                print("2 Register socket status: {}".format(self.conn)) 
             if self.Data_Check == "userlogin":
                 self.Check_User_Login()
                 #self.conn.close()
@@ -93,6 +95,7 @@ class VerifyThread(threading.Thread):
                 #self.conn.close()
             if self.Data_Check == "UserAddToGroup":
                 self.AddUserToGroup()
+                #self.conn.close()
        
     def CreateGroup(self):
         GroupName = self.Data_Pass
