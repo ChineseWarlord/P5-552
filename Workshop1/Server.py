@@ -38,8 +38,6 @@ LoginName = ""
 UserLog = ""
 UserSockets = []
 
-FUCKMITLIV = []
-
 
 class VerifyThread(threading.Thread):
     def __init__(self):
@@ -50,11 +48,11 @@ class VerifyThread(threading.Thread):
         self.Passwords = []
         
         while True:
-            self.s = socket(AF_INET, SOCK_STREAM)
-            self.s.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self.s.bind((HOST, PP))
-            self.s.listen()
-            self.conn, addr = self.s.accept()
+            self.VerifySocket = socket(AF_INET, SOCK_STREAM)
+            self.VerifySocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+            self.VerifySocket.bind((HOST, PP))
+            self.VerifySocket.listen()
+            self.conn, addr = self.VerifySocket.accept()
             
             
             print("Connected to verify thread!")
@@ -136,7 +134,6 @@ class VerifyThread(threading.Thread):
         UsersInGroup = []
         UsersInGroup2 = []
         global LoginName
-        global FUCKMITLIV
         
         print("==============================================")
         print("==============================================")
@@ -501,25 +498,7 @@ class ClientThread(threading.Thread):
                 recv_data = pickle.loads(recv_string)
                 if len(recv_string) == 0: 
                         print("Closed shit")
-                        break  
-
-                # Data structure: [userlogin, msg, toUser, groupname, keyword]
-                """
-                print("\n=============================================")
-                print("What is recv_data: {}".format(recv_data))
-                print("What is recv_data[0]: {}".format(recv_data[0]))
-                print("What is recv_data[1]: {}".format(recv_data[1]))
-                print("What is recv_data[2]: {}".format(recv_data[2]))
-                print("What is recv_data[3]: {}".format(recv_data[3]))
-                print("What is recv_data[4]: {}".format(recv_data[4]))
-                print("=============================================\n")
-                """
-                
-                ##############################################################
-                ######## How do we check list of users in group?      ########
-                ######## Data structure is:                           ########
-                ######## [user, msg, ['friend1','friend2','friend3']] ########
-                ##############################################################                                                      
+                        break
                 
                 if recv_data[1] == "EEXIT":
                     print("==================================\n==================================")
@@ -637,7 +616,6 @@ class ClientThread(threading.Thread):
                                     print("==========================================")             
                                         """
                             logs.WriteToLogGroup(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
-                            #logs.WriteToLogGroup2(recv_data[0],recv_data[1],recv_data[2],recv_data[3])
         else:
             connect_not_ok_list=["NOT OK"]
             data_string = pickle.dumps(connect_not_ok_list)
@@ -648,7 +626,24 @@ class ClientThread(threading.Thread):
             print('    handled in {}'.format(threading.get_ident()))
             print('    username: {}'.format(data_list[1]))
   
-            
+  
+class UserLogServer():  
+    def __init__(self):
+        print("Starting UserLogServer")
+        
+        self.Start_UserLogServer()
+        
+    def Start_UserLogServer(self):
+        logssocket = socket(AF_INET, SOCK_STREAM)
+        logssocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        logssocket.bind((HOST, LOGS_PORT))
+        
+        while True:
+            logssocket.listen()
+            clientsock2, clientaddr2 = logssocket.accept()
+            threadLogs = UserLogThread(clientsock2, clientaddr2)
+            threadLogs.start()
+                 
 class UserLogThread(threading.Thread):
     def __init__(self,socket,addr):
         threading.Thread.__init__(self) 
@@ -669,23 +664,21 @@ class UserLogThread(threading.Thread):
                 self.LoadLogsGroup(self.clientsock)
                     
     def LoadLogsChat(self,socket):
-        self.testsock1 = socket
         logs = PersistentLogs()
         Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"SINGLE")
         for i in Wall_of_Text:
             #print("Wall_of_Text: {}".format(i))
             Wall_of_Text = pickle.dumps(i)
             time.sleep(0.05)
-            self.testsock1.send(Wall_of_Text)
+            socket.send(Wall_of_Text)
     def LoadLogsGroup(self,socket):
-        self.testsock2 = socket
         logs = PersistentLogs()
         Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"GROUP")
         for i in Wall_of_Text:
             #print("Wall_of_Text: {}".format(i))
             Wall_of_Text = pickle.dumps(i)
             time.sleep(0.05)
-            self.testsock2.send(Wall_of_Text)
+            socket.send(Wall_of_Text)
               
 class PersistentLogs():
     def __init__(self):
@@ -729,18 +722,7 @@ class PersistentLogs():
                 text.append("STOP!")
                 return text
 
-class UserLogServer():  
-    def __init__(self):
-        logssocket = socket(AF_INET, SOCK_STREAM)
-        logssocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-        logssocket.bind((HOST, LOGS_PORT))
-        
-        while True:
-            logssocket.listen()
-            clientsock2, clientaddr2 = logssocket.accept()
-            threadLogs = UserLogThread(clientsock2, clientaddr2)
-            threadLogs.start()
-        
+
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
@@ -753,17 +735,18 @@ if __name__=="__main__":
     print(f"string length: {len(HOST)}")
     if len(HOST) == 0:
         HOST = "127.0.0.1"
-    print("\nChat Server started.")
-    print("Waiting for chat client connections...")
-    #print("Chat Server started.")
-    #print("Waiting for chat client connections...")
-    
     process1 = Process(target=VerifyThread)
     process1.start()
     process2 = Process(target=LoadDataThread)
     process2.start()
     process3 = Process(target=UserLogServer)
     process3.start()
+    
+    time.sleep(1)
+    print("\nChat Server started.")
+    print("Waiting for chat client connections...")
+    #print("Chat Server started.")
+    #print("Waiting for chat client connections...")
     
     while True:
         server.listen(1)
