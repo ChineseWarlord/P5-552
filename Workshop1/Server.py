@@ -7,7 +7,8 @@ from multiprocessing import Process
 import os
 import time
 
-HOST = '127.0.0.1'           # Symbolic name meaning all available interfaces
+#HOST = '127.0.0.1'           # Symbolic name meaning all available interfaces
+HOST = ""
 LOAD_USER_PORT = 1000
 BASE_PORT = 1234    # Arbitrary non-privileged port
 PP = 2001  # Port to listen on (non-privileged ports are > 1023)
@@ -127,11 +128,7 @@ class VerifyThread(threading.Thread):
             
         else:
             self.conn.send(pickle.dumps("GROUP ALREADY EXISTS#{}".format(LoginName)))       
-                
-        
-         
-        
-                
+                              
     def AddUserToGroup(self):
         Username = self.Data_User
         GroupName = self.Data_Pass
@@ -653,53 +650,42 @@ class ClientThread(threading.Thread):
   
             
 class UserLogThread(threading.Thread):
-    def __init__(self):
+    def __init__(self,socket,addr):
         threading.Thread.__init__(self) 
+        self.clientsock = socket
+        self.clientaddr = addr
+    def run(self):
         while True:
-            self.logssocket = socket(AF_INET, SOCK_STREAM)
-            self.logssocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
-            self.logssocket.bind((HOST, LOGS_PORT))
-            self.logssocket.listen()
-            self.clientsock, clientaddr = self.logssocket.accept()
-            
-            #print("Connected to logs thread!")
-            #print("socket: {}".format(self.clientsock))
-            #print(f"IP address: {clientaddr}")
-            
             # Data structure: [usernameLogin, usernameFriend]
             self.data = self.clientsock.recv(BUFFER_SIZE)
+            if not self.data:
+                break
             self.data = pickle.loads(self.data)
-            #print("Data: {}".format(self.data))
-            #print("Data[0]: {}".format(self.data[0]))
-            #print("Data[1]: {}".format(self.data[1]))
-            #print("Data[2]: {}".format(self.data[2]))
-            
             # Data structure: ReadLog(usernameLogin, usernameFriend)
-            logs = PersistentLogs()
             
             if self.data[2] == "SINGLE":
-                Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"SINGLE")
-                for i in Wall_of_Text:
-                    #print("Wall_of_Text: {}".format(i))
-                    Wall_of_Text = pickle.dumps(i)
-                    time.sleep(0.1)
-                    self.clientsock.send(Wall_of_Text)
-                    
-                STOP = "STOP!"
-                STOP = pickle.dumps(STOP)
-                self.clientsock.send(STOP)
-                    
+                self.LoadLogsChat(self.clientsock)
             if self.data[2] == "GROUP":
-                Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"GROUP")
-                for i in Wall_of_Text:
-                    #print("Wall_of_Text: {}".format(i))
-                    Wall_of_Text = pickle.dumps(i)
-                    time.sleep(0.1)
-                    self.clientsock.send(Wall_of_Text)
-                
-                STOP = "STOP!"
-                STOP = pickle.dumps(STOP)
-                self.clientsock.send(STOP)
+                self.LoadLogsGroup(self.clientsock)
+                    
+    def LoadLogsChat(self,socket):
+        self.testsock1 = socket
+        logs = PersistentLogs()
+        Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"SINGLE")
+        for i in Wall_of_Text:
+            #print("Wall_of_Text: {}".format(i))
+            Wall_of_Text = pickle.dumps(i)
+            time.sleep(0.05)
+            self.testsock1.send(Wall_of_Text)
+    def LoadLogsGroup(self,socket):
+        self.testsock2 = socket
+        logs = PersistentLogs()
+        Wall_of_Text = logs.ReadLog(self.data[0],self.data[1],"GROUP")
+        for i in Wall_of_Text:
+            #print("Wall_of_Text: {}".format(i))
+            Wall_of_Text = pickle.dumps(i)
+            time.sleep(0.05)
+            self.testsock2.send(Wall_of_Text)
               
 class PersistentLogs():
     def __init__(self):
@@ -734,20 +720,40 @@ class PersistentLogs():
             print("Reading chat logs")
             with open('UserLogs/{}/{}.txt'.format(user,name), 'r', newline='') as f:
                 text = f.readlines()
+                text.append("STOP!")
                 return text
         if state == "GROUP":
             print("Reading groupchat logs")
             with open('UserLogs/{}/{}.txt'.format(user,name), 'r', newline='') as f:
                 text = f.readlines()
+                text.append("STOP!")
                 return text
+
+class UserLogServer():  
+    def __init__(self):
+        logssocket = socket(AF_INET, SOCK_STREAM)
+        logssocket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
+        logssocket.bind((HOST, LOGS_PORT))
         
+        while True:
+            logssocket.listen()
+            clientsock2, clientaddr2 = logssocket.accept()
+            threadLogs = UserLogThread(clientsock2, clientaddr2)
+            threadLogs.start()
         
 server = socket(AF_INET, SOCK_STREAM)
 server.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 server.bind((HOST, BASE_PORT))
 
+
+
+
 if __name__=="__main__":
-    print("Chat Server started.")
+    HOST = input("Enter server host IP: ")
+    print(f"string length: {len(HOST)}")
+    if len(HOST) == 0:
+        HOST = "127.0.0.1"
+    print("\nChat Server started.")
     print("Waiting for chat client connections...")
     #print("Chat Server started.")
     #print("Waiting for chat client connections...")
@@ -756,7 +762,7 @@ if __name__=="__main__":
     process1.start()
     process2 = Process(target=LoadDataThread)
     process2.start()
-    process3 = Process(target=UserLogThread)
+    process3 = Process(target=UserLogServer)
     process3.start()
     
     while True:
@@ -764,11 +770,6 @@ if __name__=="__main__":
         clientsock, clientAddress = server.accept()
         CONN_COUNTER=CONN_COUNTER+1
         newthread = ClientThread(clientAddress, clientsock, CONN_COUNTER, USERNAMES_LIST, ID_LIST, PORT_IDS, PORT_HANDLES)
-        print("\n\n=======================================")
-        print("This is client socket: {}\nThis is client address: {}".format(clientsock,clientAddress))
-        print("This is USERNAME_LIST: {}".format(USERNAMES_LIST))
-        print("This is ID_LIST: {}".format(ID_LIST))
-        print("This is PORT_IDS: {}".format(PORT_IDS))
-        print("This is PORT_HANDLES: {}".format(PORT_HANDLES))
-        print("=======================================\n\n")
         newthread.start()
+        
+        

@@ -23,9 +23,12 @@ import pickle
 import os
 import sys
 import select
-from tkinter import messagebox
+from PIL import Image, ImageTk
+from itertools import count, cycle
 
-SERVER_IP = "127.0.0.1"
+
+#SERVER_IP = "127.0.0.1"
+SERVER_IP = ""
 SERVER_PORT = 1234
 VERIFY_PORT = 2001
 LOGS_PORT = 2005
@@ -53,11 +56,11 @@ class Page_Login(tk.Frame):
       
       
         self.Main_Window = tk.Toplevel()
+        self.Main_Window.attributes('-topmost', True)
         self.Main_Window.protocol("WM_DELETE_WINDOW", self.on_closing)
         self.Main_Window.title("Login Screen")
         self.Main_Window.resizable(width=False, height=False)
         self.Main_Window.configure(width=600, height=300)
-
         self.UsernameLogin = tk.StringVar()
         self.PasswordLogin = tk.StringVar()
 
@@ -70,8 +73,8 @@ class Page_Login(tk.Frame):
         self.title_label.pack(side=tk.TOP,expand=False)
 
         self.frame2 = tk.Frame(self.frame1)
-        #self.frame2 = tk.Frame(root, borderwidth=10, background="red")
         self.frame2.pack(side=tk.TOP,expand=False)
+        
         self.username_label = tk.Label(self.frame2,text="Username:")
         self.username_label.pack(side=tk.LEFT,fill='both',expand=True)
         self.username_entry_login = tk.Entry(self.frame2, width=50,textvariable=self.UsernameLogin)
@@ -437,15 +440,19 @@ class Page_Chat(tk.Frame):
         # Canvas to hold frame
         self.CanvasGroupList = tk.Canvas(self.FrameGroupList,width=1,bg="white")
         self.CanvasGroupList.pack(side=tk.LEFT,expand=True,fill="both")
+        
         # Scrollbar to canvas
         self.ScrollBarCanvasGroupList = tk.Scrollbar(self.FrameGroupList, orient="vertical", command=self.CanvasGroupList.yview)
         self.ScrollBarCanvasGroupList.pack(side=tk.RIGHT,fill=tk.Y)
+        
         # Configure canvas
         self.CanvasGroupList.configure(yscrollcommand=self.ScrollBarCanvasGroupList.set)
         self.CanvasGroupList.bind("<Configure>",lambda e: self.CanvasGroupList.configure(scrollregion=self.CanvasGroupList.bbox("all")))
+        
         # Frame inside canvas holding friend buttons
         self.FrameGroupListCanvas = tk.Frame(self.CanvasGroupList,bg="white")
         self.CanvasGroupList.create_window((25,10),window=self.FrameGroupListCanvas,anchor="nw")
+        
         self.FrameGroupListCanvas.bind("<Configure>", self.reset_scrollregion)
         
         # Button for exiting program
@@ -722,16 +729,32 @@ class Page_Chat(tk.Frame):
         self.userchatLabel = tk.Label(self.UserChatWindowFrame,text="{}'s Chat".format(friend), bg="white",fg="black",font=('arial',14,'bold'), borderwidth=1)
         self.userchatLabel.pack(side=tk.TOP,expand=False,anchor='center',pady=3) 
 
-        self.UserChatFrame = tk.Frame(self.UserChatWindowFrame, highlightbackground="black", highlightthickness=6,borderwidth=10,height=400,width=400)
+        self.UserChatFrame = tk.Frame(self.UserChatWindowFrame, highlightbackground="black", highlightthickness=6,borderwidth=10,height=400,width=500,bg="white")
         self.UserChatFrame.pack(side=tk.TOP)
-        self.UserChatFrame.pack_propagate(0)
+        self.UserChatFrame.propagate(0)
 
-        self.chat_box = tk.Text(self.UserChatFrame, wrap = tk.WORD)
+        self.UserChatFrame2 = tk.Frame(self.UserChatFrame,height=390,width=16)
+        self.UserChatFrame2.pack(side=tk.RIGHT)
+        self.UserChatFrame2.propagate(0)
+        
+        
+        self.gifFrame1 = tk.Frame(self.UserChatFrame,height=220,width=1,bg="white")
+        self.gifFrame1.pack(side=tk.BOTTOM,fill="both")
+        self.gifFrame1.propagate(0)
+        lbl = ImageLabel(self.gifFrame1,bg="white")
+        lbl.pack(anchor="center")
+        lbl.load('loading.gif')
+        
+        self.chat_box = tk.Text(self.UserChatFrame,height=150,width=150, wrap = tk.WORD)
         self.chat_box.configure(state="disabled")
-        self.chat_box.pack(fill='both',expand=True)
-        self.chat_box.pack_propagate(0)
-    
-      
+        #self.chat_box.pack(side=tk.LEFT,expand=True,fill="both")
+        self.chat_box.propagate(1)
+        
+        scrollbar1 = tk.Scrollbar(self.UserChatFrame2,orient="vertical",command=self.chat_box.yview)
+        scrollbar1.pack(side=tk.RIGHT,fill=tk.Y)
+        self.chat_box['yscrollcommand'] = scrollbar1.set
+        
+
         self.input_field = tk.Entry(self.UserChatWindowFrame,width=64,borderwidth=5,highlightbackground="black", highlightthickness=1)
         self.input_field.pack(side=tk.TOP,pady=1)
         self.input_field.bind("<Return>",self.key_sendmsg)
@@ -741,19 +764,15 @@ class Page_Chat(tk.Frame):
         self.thread2.set(self.chat_box,"","SINGLE")
 
         self.stored_logs = []
-        self.ReadLogs("single","")
-        self.stored_logs.remove("STOP!")
+        ThreadLogs1 = threading.Thread(target=self.ReadLogs,args=("single",""))
+        ThreadLogs1.start()
+        #ThreadLogs1.join()
+        
+        #self.ReadLogs("single","")
+        #self.stored_logs.remove("STOP!")
         #print("logs: ", logs)
-        self.chat_box.configure(state="normal")
-        #self.chat_box.insert("end","\n"+logs) ORIGINAL
-        for i in self.stored_logs:
-            self.chat_box.insert("end",i)
-        self.chat_box.configure(state="disabled")
-        self.chat_box.see("end")
-
-        scrollbar = tk.Scrollbar(self.chat_box,command=self.chat_box.yview)
-        scrollbar.pack(side=tk.RIGHT,fill=tk.Y)
-        self.chat_box['yscrollcommand'] = scrollbar.set
+        #self.chat_box.configure(state="normal")
+        #self.chat_box.insert("end","\n"+logs) ORIGINAL        
 
         # set structure: [chatboxSINGLE, inputSINGLE, chatboxGROUP, inputGROUP]
         # set structure: [chatboxSINGLE, chatboxGROUP, state]
@@ -994,16 +1013,30 @@ class Page_Chat(tk.Frame):
         self.MembersInGroup.pack(side=tk.TOP,expand=False) 
         self.MembersInGroup.propagate(0)
         
-        self.GroupChatTestFrame = tk.Frame(self.GroupChatWindowUserFrame, highlightbackground="black", highlightthickness=6,borderwidth=10,height=340,width=800)
+        self.GroupChatTestFrame = tk.Frame(self.GroupChatWindowUserFrame, highlightbackground="black", highlightthickness=6,borderwidth=10,height=400,width=500,bg="white")
         self.GroupChatTestFrame.pack(side=tk.TOP,pady=5)
-        self.GroupChatTestFrame.pack_propagate(0)
+        self.GroupChatTestFrame.propagate(0)
         
-          
-        #self.chat_box = tk.Text(self.ChatWindowUserFrame, height=25)
+        self.GroupChatTestFrame2 = tk.Frame(self.GroupChatTestFrame,height=500,width=16)
+        self.GroupChatTestFrame2.pack(side=tk.RIGHT)
+        self.GroupChatTestFrame2.propagate(0)
+        
+        self.gifFrame2 = tk.Frame(self.GroupChatTestFrame,height=220,width=1,bg="white")
+        self.gifFrame2.pack(side=tk.BOTTOM,fill="both")
+        self.gifFrame2.propagate(0)
+        lbl = ImageLabel(self.gifFrame2,bg="white")
+        lbl.pack(anchor="center")
+        lbl.load('loading.gif')
+        
         self.Groupchat_box = tk.Text(self.GroupChatTestFrame, wrap = tk.WORD)
         self.Groupchat_box.configure(state="disabled")
-        self.Groupchat_box.pack(fill='both',expand=True)
-        self.Groupchat_box.pack_propagate(0)
+        #self.Groupchat_box.pack(side=tk.LEFT,expand=True,fill="both")
+        self.Groupchat_box.propagate(1)
+        
+        scrollbarGroup = tk.Scrollbar(self.GroupChatTestFrame2,orient="vertical",command=self.Groupchat_box.yview)
+        scrollbarGroup.pack(side=tk.RIGHT,fill=tk.Y)
+        self.Groupchat_box['yscrollcommand'] = scrollbarGroup.set
+        
         
         self.input_fieldGroup = tk.Entry(self.GroupChatWindowUserFrame,width=50,borderwidth=5,highlightbackground="black", highlightthickness=1)
         self.input_fieldGroup.pack(side=tk.TOP,pady=1)
@@ -1013,20 +1046,16 @@ class Page_Chat(tk.Frame):
         self.thread1.set("","", self.Groupchat_box, self.input_fieldGroup)
         self.thread2.set("", self.Groupchat_box, "GROUP")
         
-        self.stored_logs = []
-        self.ReadLogs("group",group)
-        self.stored_logs.remove("STOP!")
-        #print("logs: ", logs)
-        self.Groupchat_box.configure(state="normal")
-        #self.chat_box.insert("end","\n"+logs) ORIGINAL
-        for i in self.stored_logs:
-            self.Groupchat_box.insert("end",i)
-        self.Groupchat_box.configure(state="disabled")
-        self.Groupchat_box.see("end")
+        self.stored_logs2 = []
+        ThreadLogs2 = threading.Thread(target=self.ReadLogs,args=("group",group))
+        ThreadLogs2.start()
+        #ThreadLogs2.join()
         
-        scrollbarGroup = tk.Scrollbar(self.Groupchat_box,command=self.Groupchat_box.yview)
-        scrollbarGroup.pack(side=tk.RIGHT,fill=tk.Y)
-        self.Groupchat_box['yscrollcommand'] = scrollbarGroup.set
+        #self.ReadLogs("group",group)
+        #self.stored_logs.remove("STOP!")
+        #print("logs: ", logs)
+        #self.Groupchat_box.configure(state="normal")
+        #self.chat_box.insert("end","\n"+logs) ORIGINAL
         
         # Load groupname users to msg
         self.LoadSocket = socket(AF_INET,SOCK_STREAM)
@@ -1062,6 +1091,8 @@ class Page_Chat(tk.Frame):
         self.buttonGroup['command'] = self.send_message_button_group
         self.buttonGroup.pack()
     
+    
+    
     def ReadLogs(self,state,groupname):
         global userfriend
         GroupOrSingle = state
@@ -1076,19 +1107,78 @@ class Page_Chat(tk.Frame):
             # Data structure: [usernameLogin, usernameFriend, groupname]
             self.data_string = pickle.dumps([stupidusername, userfriend, "SINGLE"])
             self.logssocket.send(self.data_string)
+            while True:
+                self.data = self.logssocket.recv(BUFFER_SIZE)
+                if self.data:
+                    time.sleep(0.01)
+                    #print("Getting data!")
+                self.data = pickle.loads(self.data)
+                self.stored_logs.append(self.data)
+                if "STOP!" in self.stored_logs:
+                    print(f"STOP! received")
+                    print("Finished loading!")
+                    self.logssocket.close()
+                    self.stored_logs.remove("STOP!")
+                    self.gifFrame1.destroy()
+                    break
+            for i in self.stored_logs:
+                self.chat_box.configure(state="normal")
+                if i.find("YOU:") == 0:
+                    text1 = i.split(":")
+                    text1.append(" ")
+                    self.chat_box.tag_configure("right",justify="right")
+                    self.chat_box.tag_configure('bold', font=("arial",10,"bold"))
+                    self.chat_box.insert("end",text1[0]+":",("right","bold"))
+                    self.chat_box.insert("end",text1[1],("right"))
+                else:
+                    if i.find("\n") == 0:
+                        self
+                    else:
+                        text2 = i.split(":")
+                        self.chat_box.insert("end",text2[0]+":",("bold"))
+                        self.chat_box.insert("end",text2[1])
+            self.chat_box.pack(side=tk.LEFT,expand=True,fill="both")
+            self.chat_box.configure(state="disabled")
+            self.chat_box.see("end")
           
         if GroupOrSingle == "group":
             # Data structure: [usernameLogin, usernameFriend, groupname]
             self.data_string = pickle.dumps([stupidusername, groupName, "GROUP"])
             self.logssocket.send(self.data_string)
       
-        while True:
-            self.data = self.logssocket.recv(BUFFER_SIZE)
-            self.data = pickle.loads(self.data)
-            self.stored_logs.append(self.data)
-            if "STOP!" in self.stored_logs:
-                self.logssocket.close()
-                break
+            while True:
+                self.data = self.logssocket.recv(BUFFER_SIZE)
+                if self.data:
+                    time.sleep(0.01)
+                    #print("Getting data!")
+                self.data = pickle.loads(self.data)
+                self.stored_logs2.append(self.data)
+                if "STOP!" in self.stored_logs2:
+                    print(f"STOP! received")
+                    print("Finished loading!")
+                    self.logssocket.close()
+                    self.stored_logs2.remove("STOP!")
+                    self.gifFrame2.destroy()
+                    break
+                
+            for i in self.stored_logs2:
+                self.Groupchat_box.configure(state="normal")
+                if i.find("YOU:") == 0:
+                    text1 = i.split(":")
+                    self.Groupchat_box.tag_configure("right",justify="right")
+                    self.Groupchat_box.tag_configure('bold', font=("arial",10,"bold"))
+                    self.Groupchat_box.insert("end",text1[0]+":",("right","bold"))
+                    self.Groupchat_box.insert("end",text1[1],("right"))
+                else:
+                    if i.find("\n") == 0:
+                        self
+                    else:
+                        text2 = i.split(":")
+                        self.Groupchat_box.insert("end",text2[0]+":",("bold"))
+                        self.Groupchat_box.insert("end",text2[1])
+            self.Groupchat_box.pack(side=tk.LEFT,expand=True,fill="both")
+            self.Groupchat_box.configure(state="disabled")
+            self.Groupchat_box.see("end")
             
     def key_sendmsg(self, event):
         self.send_message_button() 
@@ -1119,7 +1209,14 @@ class SendData():
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             self.chat.configure(state="normal")
-            self.chat.insert("end","\nYOU: {}\n".format(send_data))
+            self.chat.insert("end","\n")
+            
+            self.chat.tag_configure('bold', font=("arial",10,"bold"))
+            self.chat.tag_configure("right",justify="right")
+            
+            self.chat.insert("end","YOU:".format(send_data),("right","bold"))
+            self.chat.insert("end"," {} ".format(send_data),("right"))
+            #self.chat.tag_config("bold",font=("arial",10,"bold"))
             self.chat.configure(state="disabled")
             self.chat.see("end") 
                 
@@ -1134,7 +1231,14 @@ class SendData():
             chat_string = pickle.dumps(chat_data)
             self.ds.send(chat_string)
             self.chatgroup.configure(state="normal")
-            self.chatgroup.insert("end","\nYOU: {}\n".format(send_data))
+            
+            self.chatgroup.insert("end","\n")
+            self.chatgroup.tag_configure('bold', font=("arial",10,"bold"))
+            self.chatgroup.tag_configure("right",justify="right")
+            
+            self.chatgroup.insert("end","YOU:".format(send_data),("right","bold"))
+            self.chatgroup.insert("end"," {}\n".format(send_data),("right"))
+            
             self.chatgroup.configure(state="disabled")
             self.chatgroup.see("end")
                       
@@ -1170,13 +1274,17 @@ class ReceiveData(threading.Thread):
                 print("recv_data:", recv_data)
                 print(f"userfriend: {userfriend}")
                 print(f"recv_data[0]: {recv_data[0]}")
-                if userfriend == recv_data[0]:
+                if userfriend == recv_data[3]:
                     self.chat.configure(state="normal")
                     msg = "{}: {}".format(recv_data[0],recv_data[1])
                     print("====================")
                     print("msg: {}\nFrom: {}".format(recv_data[1],recv_data[0]))
                     print("====================")
-                    self.chat.insert("end","\n"+msg+"\n")
+                    self.chat.tag_configure('bold', font=("arial",10,"bold"))
+                    self.chat.insert("end","\n")
+                    self.chat.insert("end",f"{recv_data[0]}:","bold")
+                    self.chat.insert("end",f" {recv_data[1]}")
+                    #self.chat.insert("end","\n"+msg+"\n")
                     self.chat.configure(state="disabled")
                     self.chat.see("end")
             if self.state == "GROUP":
@@ -1191,7 +1299,11 @@ class ReceiveData(threading.Thread):
                     print("====================")
                     print("msg: {}\nFrom: {}".format(recv_data[1],recv_data[0]))
                     print("====================")
-                    self.chatgroup.insert("end","\n"+msg+"\n")
+                    self.chatgroup.tag_configure('bold', font=("arial",10,"bold"))
+                    self.chatgroup.insert("end","\n")
+                    self.chatgroup.insert("end",f"{recv_data[0]:}","bold")
+                    self.chatgroup.insert("end",f" {recv_data[1]}")
+                    #self.chatgroup.insert("end","\n"+msg+"\n")
                     self.chatgroup.configure(state="disabled")
                     self.chatgroup.see("end")
     # set structure: [chatboxSINGLE, chatboxGROUP, state]
@@ -1200,8 +1312,47 @@ class ReceiveData(threading.Thread):
         self.chat = chat_box
         self.chatgroup = chat_box_group  
 
+class ImageLabel(tk.Label):
+    """
+    A Label that displays images, and plays them if they are gifs
+    :im: A PIL Image instance or a string filename
+    """
+    def load(self, im):
+        if isinstance(im, str):
+            im = Image.open(im)
+        frames = []
 
+        try:
+            for i in count(1):
+                frames.append(ImageTk.PhotoImage(im.copy()))
+                im.seek(i)
+        except EOFError:
+            pass
+        self.frames = cycle(frames)
+
+        try:
+            self.delay = im.info['duration']
+        except:
+            self.delay = 100
+
+        if len(frames) == 1:
+            self.config(image=next(self.frames))
+        else:
+            self.next_frame()
+
+    def unload(self):
+        self.config(image=None)
+        self.frames = None
+
+    def next_frame(self):
+        if self.frames:
+            self.config(image=next(self.frames))
+            self.after(self.delay, self.next_frame)
 
 if __name__=="__main__":
-   
-   Main = Page_Login()
+    SERVER_IP = input("Enter server IP: ")
+    print(f"string length: {len(SERVER_IP)}")
+    if len(SERVER_IP) == 0:
+        SERVER_IP = "127.0.0.1"
+    
+    Main = Page_Login()
