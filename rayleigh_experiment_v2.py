@@ -10,6 +10,7 @@ Original file is located at
 # Commented out IPython magic to ensure Python compatibility.
 from scipy import constants
 from scipy.spatial import distance
+from scipy.signal import savgol_filter
 import tensorflow as tf
 import numpy as np
 
@@ -40,51 +41,131 @@ import matplotlib.pyplot as plt
 from tensorflow.keras import Model
 
 class Large_Scale_Fading():
-  def __init__(self, num_ut, num_bs, reference_distance = 10, frequency = 3e9, path_loss_exponent = 2.7):
+  def __init__(self, num_ut, num_bs, num_ut_ant, num_bs_ant, reference_distance = 10, frequency = 3e9, path_loss_exponent = 2.7, test1 = False, show_plot = True):
     self.num_ut = num_ut
     self.num_bs = num_bs
-    self.large_fading_coefficients = np.zeros([1, self.num_ut, 1, 1, 1])
+    self.num_ut_ant = num_ut_ant
+    self.num_bs_ant = num_bs_ant
+    # self.large_fading_coefficients = np.ones([1, self.num_ut, 1, 1, 1])
     self.c = constants.speed_of_light
     self.d_0 = reference_distance
     self.f_0 = frequency 
     self.gamma = path_loss_exponent
+    self.test_1 = test1
+    self.show_plot = show_plot
 
   def calc_large_fading_coefficient(self, distance):
+    # Added 18 db of antenna gain at the receiver https://5ghub.us/5g-transmit-power-and-antenna-radiation/
     if (distance > self.d_0):
       beta_db = (-20*np.log10(((4*constants.pi*self.d_0)/self.c)*self.f_0)) - (10*self.gamma*np.log10(distance/self.d_0))
     else: 
       beta_db = -20*np.log10(((4*constants.pi*distance)/self.c)*self.f_0)
-
     beta = np.power(10, beta_db/10)
     return beta
 
-  def generate_array(self):
-    bs = np.array([[-20, 0], [20, 0]])
-    ut = np.random.randint(low=-30, high=30, size=(self.num_ut, 2))
+  def generate_array(self, distance_to_BS=0):
+    # Code for generating random BS and UT.
+    if self.test_1 == True:
+      bs = np.array([[-10, 0], [0, 0], [10, 0]])
+      ut = np.array([[0, distance_to_BS]])
+    else:
+      bs = np.random.randint(low=-30, high=30, size=(self.num_bs, 2))
+      ut = np.random.randint(low=-30, high=30, size=(self.num_ut, 2))
+
     #Generate Plot of BS and UTs
+    if self.show_plot:
+      for i in range(self.num_bs):
+        plt.scatter(bs[i,0], bs[i,1])
+        plt.annotate(f"BS-{i}", (bs[i,0], bs[i,1]))
 
+      for i in range(self.num_ut):
+        plt.scatter(ut[i,0], ut[i,1])
+        ut_num = "UT_" + str(i)
+        plt.annotate(ut_num, (ut[i,0], ut[i,1]))
+      plt.title("Location of BS and UT(s)")
+      plt.show()
+
+    # Generate Array of distances between BS(s) and UT(s). Entry i, j is the distance between BS-i and UT-j. 
+    self.distance_array = np.zeros([self.num_bs, self.num_ut])
     for i in range(self.num_bs):
-      plt.scatter(bs[i,0], bs[i,1])
-      plt.annotate(f"BS-{i}", (bs[i,0], bs[i,1]))
+      for j in range(self.num_ut):
+        self.distance_array[i, j] = distance.euclidean(bs[i], ut[j])
 
-    for i in range(self.num_ut):
-      plt.scatter(ut[i,0], ut[i,1])
-      ut_num = "UT_" + str(i)
-      plt.annotate(ut_num, (ut[i,0], ut[i,1]))
-    plt.title("Location of BS and UT(s)")
-    plt.show()
+    # Generate Array of path loss.
+    self.path_loss_array = np.zeros([1, self.num_bs, self.num_bs_ant, self.num_ut, self.num_ut_ant, 1, 1], dtype=np.float64)
+    for i in range(self.num_bs):
+      for j in range(self.num_ut):
+        self.path_loss_array[0, i, :, j, :, 0, 0] = self.calc_large_fading_coefficient(self.distance_array[i,j])
+    self.path_loss_array = tf.complex(np.float32(self.path_loss_array), tf.zeros(1, dtype=tf.float32))
 
-    for i in range(self.num_ut):
-      dist = distance.euclidean(bs[i], ut[i])
-      self.large_fading_coefficients[0, i, 0, 0, 0] = self.calc_large_fading_coefficient(dist)
-    self.large_fading_coefficients = tf.complex(np.float32(self.large_fading_coefficients), tf.zeros(1, dtype=tf.float32))
+  def get_coefficients(self, ut_number):
+    ind = np.argmin(self.distance_array, axis=0)
+    return ind[ut_number]
 
-  def __call__(self, x_rg):
-    self.generate_array()
-    self.large_scale_coefficients = tf.broadcast_to(self.large_fading_coefficients, [1, self.num_ut, 1, 14, 76])
-    x_rg_hat = x_rg*np.sqrt(self.large_scale_coefficients)
-    
-    return x_rg_hat
+  def __call__(self, h_freq, distance_to_BS=0):
+    # generate path loss array
+    self.generate_array(distance_to_BS)
+
+    # Broadcast shape of path loss array to shape of channel
+    self.path_loss_array = tf.broadcast_to(self.path_loss_array, h_freq.shape)
+
+    # Apply path loss
+    h_faded = h_freq*np.sqrt(self.path_loss_array)
+
+    return h_faded
+
+class Data_Aggregation():
+  def __init__(self, num_ut, num_ut_ant, Large_Scale_Fading):
+    self._num_ut = num_ut
+    self._num_ut_ant = num_ut_ant
+    self._large_scale_fading = Large_Scale_Fading
+
+  def __call__(self, batch_size, b_hat, weighted=False):
+    b_final = np.zeros(b_hat[0].shape)
+    if weighted == False:
+      for h in range(batch_size):
+        for j in range(self._num_ut):
+          for k in range(self._num_ut_ant):
+            for i in range(tf.shape(b_final)[3]):
+              ones = 0
+              zeros = 0
+              for z in b_hat:
+                if z[h, j, k, i] == 1:
+                  ones += 1
+                else: 
+                  zeros += 1
+              if ones > zeros:
+                b_final[h, j, k, i] = 1
+              elif ones < zeros:
+                b_final[h, j, k, i] = 0
+              else:
+                # Equal amount of 1s and 0s. Even amout of BS.
+                # Get which BS has lowest distance to the UT
+                x = self._large_scale_fading.get_coefficients(j)
+                b_final[h, j, k, i] = b_hat[x][h, j, k, i]
+
+    if weighted == True:
+      total_distance = 0
+      for j in range(len(b_hat)):
+        total_distance += self._large_scale_fading.distance_array[j]
+
+      for h in range(batch_size):
+        for j in range(self._num_ut):
+          for k in range(self._num_ut_ant):
+            for i in range(tf.shape(b_final)[3]):
+              value = 0
+              for z in range(len(b_hat)):
+                if b_hat[z][h, j, k, i] == 0:
+                  value += (np.log10(total_distance)-np.log10(self._large_scale_fading.distance_array[z]))/np.log10(total_distance)*(-1)
+                else:
+                  value += (np.log10(total_distance)-np.log10(self._large_scale_fading.distance_array[z]))/np.log10(total_distance)*(1)
+              
+              if value < 0:
+                b_final[h, j, k, i] = 0
+              else:
+                b_final[h, j, k, i] = 1
+
+    return b_final
 
 class TestModel(Model):
   def __init__(self, num_ut, num_bs, num_ut_ant, num_bs_ant, perfect_csi):
@@ -121,40 +202,44 @@ class TestModel(Model):
     self._binary_source = sn.utils.BinarySource()
     self._mapper = sn.mapping.Mapper("qam", self._num_bits_per_symbol)
     self._rg_mapper = sn.ofdm.ResourceGridMapper(self._rg)
-    self._large_scale_fading = Large_Scale_Fading(self._num_ut, self._num_bs)
+    self._large_scale_fading = Large_Scale_Fading(self._num_ut, self._num_bs, self._num_ut_ant, self._num_bs_ant, test1=True, show_plot = False)
     self._rayleigh_fading = sn.channel.RayleighBlockFading(self._num_bs, self._num_bs_ant, self._num_ut, self._num_ut_ant)
-    self._channel = sn.channel.OFDMChannel(self._rayleigh_fading, self._rg, add_awgn=True, normalize_channel=True, return_channel=True)
+    self._generate_channel = sn.channel.GenerateOFDMChannel(self._rayleigh_fading, self._rg, normalize_channel=True)
+    self._apply_channel = sn.channel.ApplyOFDMChannel(add_awgn=True)
     self._ls_est = sn.ofdm.LSChannelEstimator(self._rg, interpolation_type="nn")
     self._remove_nulled_subcarriers = sn.ofdm.RemoveNulledSubcarriers(self._rg)
     self._lmmse_equ = sn.ofdm.LMMSEEqualizer(self._rg, self._stream_management)
     self._demapper = sn.mapping.Demapper("app", "qam", self._num_bits_per_symbol, hard_out="True")
+    self._data_aggregation = Data_Aggregation(self._num_ut, self._num_ut_ant, self._large_scale_fading)
 
-  def call(self, batch_size, beta = 0):
+  def call(self, batch_size, beta = 1, weighted=False):
     no = sn.utils.ebnodb2no(ebno_db=30, num_bits_per_symbol=self._num_bits_per_symbol, coderate=1, resource_grid=self._rg)
     bits = self._binary_source([batch_size, self._num_ut, self._rg.num_streams_per_tx, self._n])
     x = self._mapper(bits)
     x_rg = self._rg_mapper(x)
     
-    if beta != 0:
-      x_faded = x_rg*np.sqrt(beta)
-    else:
-      x_faded = self._large_scale_fading(x_rg)
+    # Generate Channel
+    h_freq = self._generate_channel(batch_size)
 
-    y, h_freq = self._channel([x_faded, no])
-      
+    # Apply Large Scale Fading to channel
+    h_freq_hat = self._large_scale_fading(h_freq, distance_to_BS = beta)
+
+    # Apply Channel
+    y = self._apply_channel((x_rg, h_freq_hat, no))
+
     # Use perfect CSI or Channel Estimator
     if self._perfect_csi:
         h_hat = self._remove_nulled_subcarriers(h_freq)
         err_var = 0.0
     else:
         h_hat, err_var = self._ls_est ([y, no])
-    
-    # Split channel tensor into num_bs tensors. Basically separates the channel for each BS
+
+    # Split channel tensor into num_bs tensors
     h_hat = tf.split(h_hat, num_or_size_splits=self._num_bs, axis=1)
 
-    # Apply OFDM channel to mapped symbols
+    # Split received symbols tensor into num_bs tensors
     y = tf.split(y, num_or_size_splits=self._num_bs, axis=1)
-    
+
     # Apply LMMSE Equalizer for each BS
     counter = 0
     b_hat = []
@@ -163,53 +248,70 @@ class TestModel(Model):
       counter += 1
       b_hat.append(self._demapper([x_hat, no_eff]))
     
+    # print(b_hat[0])
+    # print(b_hat[1])
+    # print(b_hat[2])
     # Do majority vote to find final bits
-    b_final = np.zeros(b_hat[0].shape)
-    for i in range(tf.shape(b_final)[3]):
-      ones = 0
-      zeros = 0
-      for z in b_hat:
-        if z[0, 0, 0, i] == 1:
-          ones += 1
-        else: 
-          zeros += 1
-      if ones > zeros:
-        b_final[0, 0, 0, i] = 1
-      else:
-        b_final[0, 0, 0, i] = 0
+    b_final =  self._data_aggregation(batch_size, b_hat, weighted=weighted)
 
     return bits, b_final
 
 #ebno_db = 0
 batch_size = 1
 
-model = TestModel(num_ut=1, num_bs=1, num_ut_ant=1, num_bs_ant=64, perfect_csi = True)
-# model2 = TestModel(num_ut=1, num_bs=3, num_ut_ant=1, num_bs_ant=64, perfect_csi = True)
-# model3 = TestModel(num_ut=1, num_bs=5, num_ut_ant=1, num_bs_ant=64, perfect_csi = True)
+model = TestModel(num_ut=1, num_bs=3, num_ut_ant=1, num_bs_ant=64, perfect_csi = False)
+#model2 = TestModel(num_ut=1, num_bs=1, num_ut_ant=1, num_bs_ant=64, perfect_csi = False)
+# model3 = TestModel(num_ut=1, num_bs=5, num_ut_ant=1, num_bs_ant=64, perfect_csi = False)
 ber = []
 x = []
-# ber2 = []
-# ber3 = []
+ber2 = []
+# # ber3 = []
 
-for i in range(4, 11):
-  for j in range(9, 0, -1):
-    b, b_hat = model(batch_size=batch_size, beta=j*10**-i)
-    ber.append(sn.utils.metrics.compute_ber(b, b_hat))
-    x.append(j*10**-i)
-    # b2, b_hat2 = model2(batch_size=batch_size, beta=j*10**-i)
-    # b3, b_hat3 = model3(batch_size=batch_size, beta=j*10**-i)
-    # ber2.append(sn.utils.metrics.compute_ber(b2, b_hat2))
-    # ber3.append(sn.utils.metrics.compute_ber(b3, b_hat3))
+# for i in range(3, 8):
+#   for j in range(9, 0, -1):
+#     b, b_hat = model(batch_size=batch_size, beta=j*10**-i)
+#     ber.append(sn.utils.metrics.compute_ber(b, b_hat))
+#     x.append(j*10**-i)
+#     #b2, b_hat2 = model(batch_size=batch_size, beta=j*10**-i)
+#     # b3, b_hat3 = model3(batch_size=batch_size, beta=j*10**-i)
+#     #ber2.append(sn.utils.metrics.compute_ber(b2, b_hat2))
+#     # ber3.append(sn.utils.metrics.compute_ber(b3, b_hat3))
+  
+# # X_Y_Spline = make_interp_spline(x, ber)
+# # X_ = np.linspace(x.min(), x.max(), 500)
+# # Y_ = X_Y_Spline(X_)
+# plt.rcParams["figure.figsize"] = (12.8, 9.6)
+# plt.loglog(x, ber, "r", label="Perfect CSI")
+# #plt.loglog(x, ber2, "b", label="Non-perfect CSI")
+# # plt.loglog(x, ber3, "g", label="4 UE, 5 BS")
+# plt.ylabel("Bit Error Rate (BER)")
+# plt.xlabel("Path Loss")
+# plt.gca().invert_xaxis()
+# plt.legend()
+# plt.show()
 
+
+for distance_to_bs in range(1, 20, 1):
+  b, b_hat = model(batch_size=batch_size, beta=distance_to_bs, weighted=False)
+  x2 = sn.utils.metrics.compute_ber(b, b_hat)
+  ber.append(x2)
+  b, b_hat = model(batch_size=batch_size, beta=distance_to_bs, weighted=True)
+  x2 = sn.utils.metrics.compute_ber(b, b_hat)
+  ber2.append(x2)
+  x.append(distance_to_bs)
+
+ber_hat = savgol_filter(ber, 11, 3)
+ber2_hat = savgol_filter(ber2, 11, 3)
 plt.rcParams["figure.figsize"] = (12.8, 9.6)
-plt.loglog(x, ber, "r", label="1 BS")
-# plt.loglog(x, ber2, "b", label="3 BS")
-# plt.loglog(x, ber3, "g", label="5 BS")
+#plt.semilogy(x, ber, "r", label="Original Data")
+plt.semilogy(x, ber_hat, "g", label="Majority Vote")
+plt.semilogy(x, ber2_hat, "r", label="Weighted Vote")
 plt.ylabel("Bit Error Rate (BER)")
-plt.xlabel("Path Loss")
-plt.gca().invert_xaxis()
+plt.xlabel("Distance [M]")
 plt.legend()
 plt.show()
+
+
 
 # ber = []
 # x = []
@@ -228,13 +330,50 @@ plt.show()
 # #plt.gca().invert_xaxis()
 # plt.show()
 
-# ber2 = sn.utils.metrics.compute_ber(b_hat[0], b_hat[2])
-# ber3 = sn.utils.metrics.compute_ber(b_hat[1], b_hat[2])
-# nb_bits = np.size(b.numpy())
-# print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber.numpy(), 30, nb_bits))
-# print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber2.numpy(), 30, nb_bits))
-# print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber3.numpy(), 30, nb_bits))
+# b, b_hat = model(batch_size=batch_size, beta = 10)
+# ber = sn.utils.metrics.compute_ber(b, b_hat)
 
-#ber_final = sn.utils.metrics.compute_ber(b, b_hat)
-#print(f"Majority vote output: {b_hat}")
-#print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber_final.numpy(), 30, nb_bits))
+# # # # ber3 = sn.utils.metrics.compute_ber(b_hat[1], b_hat[2])
+# nb_bits = np.size(b.numpy())
+# # print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber.numpy(), 30, nb_bits))
+# # print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber2.numpy(), 30, nb_bits))
+# # print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber3.numpy(), 30, nb_bits))
+
+# #ber_final = sn.utils.metrics.compute_ber(b, b_hat)
+# #print(f"Majority vote output: {b_hat}")
+# print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber.numpy(), 30, nb_bits))
+
+#https://www.geeksforgeeks.org/boyer-moore-majority-voting-algorithm/
+
+
+# total_distance = 0
+# x = [-1, 1, 1]
+# distances = [3, 11, 11]
+
+# for i in distances:
+#   total_distance+=i
+
+# value = 0
+# for i in range(len(x)):
+#   value += (np.log10(total_distance)-np.log10(distances[i]))/np.log10(total_distance)*x[i]
+# print(value)
+
+# value = 0
+# for i in range(len(x)):
+#   value += (np.log2(total_distance)-np.log2(distances[i]))/np.log2(total_distance)*x[i]
+# print(value)
+
+# value = 0
+# for i in range(len(x)):
+#   value += (np.square(np.log2(total_distance))-np.square(np.log2(distances[i])))/np.square(np.log2(total_distance))*x[i]
+# print(value)
+
+# value = 0
+# for i in range(len(x)):
+#   value += (np.square(total_distance)-np.square(distances[i]))/np.square(total_distance)*x[i]
+# print(value)
+
+# value = 0
+# for i in range(len(x)):
+#   value += ((total_distance)-(distances[i]))/(total_distance)*x[i]
+# print(value)
