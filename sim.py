@@ -270,7 +270,7 @@ class TestModel(Model):
 
     return bits, b_final
 
-batch_size = 5
+batch_size = 10
 
 #model2 = TestModel(num_ut=1, num_bs=1, num_ut_ant=1, num_bs_ant=64, perfect_csi = False, cell_free = False)
 
@@ -281,7 +281,7 @@ ber3 = []
 
 
 start = time.time()
-for i in range(4):
+for i in range(7):
   print(f"Simulating for {2**i} UE...")
   start_2 = time.time()
   model = TestModel(num_ut=2**i, num_bs=4, num_ut_ant=1, num_bs_ant=64, perfect_csi = False, cell_free = True)
@@ -297,6 +297,8 @@ for i in range(4):
   x.append(2**i)
   plt.show()
   print(f"Completion time: {time.time()-start_2}")
+
+print(f'Running time: {time.time()-start}')
 
 plt.rcParams["figure.figsize"] = (12.8, 9.6)
 plt.plot(x, ber, "g", label="Majority Vote")
@@ -337,7 +339,6 @@ plt.show()
 #   b, b_hat = model(batch_size=batch_size, weighted=True)
 #   ber += sn.utils.metrics.compute_ber(b, b_hat)
 # ber = ber/1
-print(f'Running time: {time.time()-start}')
 
 # nb_bits = np.size(b.numpy())
 # print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber.numpy(), 30, nb_bits))
