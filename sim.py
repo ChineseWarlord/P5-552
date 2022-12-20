@@ -73,7 +73,7 @@ class Large_Scale_Fading():
     elif self.test_2:
       bsd = 1500
       bs = np.array([[0, 0], [bsd, 0], [0, bsd], [bsd, bsd]])
-      ut = np.random.randint(low=0, high=bsd, size=(self.num_ut, 2))
+      ut = np.random.randint(low=10, high=bsd-10, size=(self.num_ut, 2))
     else:
       bs = np.random.randint(low=-30, high=30, size=(self.num_bs, 2))
       ut = np.random.randint(low=-30, high=30, size=(self.num_ut, 2))
@@ -270,18 +270,49 @@ class TestModel(Model):
 
     return bits, b_final
 
-batch_size = 1
+batch_size = 5
 
-model = TestModel(num_ut=8, num_bs=4, num_ut_ant=1, num_bs_ant=64, perfect_csi = False, cell_free = True)
 #model2 = TestModel(num_ut=1, num_bs=1, num_ut_ant=1, num_bs_ant=64, perfect_csi = False, cell_free = False)
 
 ber = []
 x = []
 ber2 = []
 ber3 = []
-tests = 1
+
 
 start = time.time()
+for i in range(4):
+  print(f"Simulating for {2**i} UE...")
+  start_2 = time.time()
+  model = TestModel(num_ut=2**i, num_bs=4, num_ut_ant=1, num_bs_ant=64, perfect_csi = False, cell_free = True)
+
+  b, b_hat = model(batch_size=batch_size, weighted=False)
+  ber_now = sn.utils.metrics.compute_ber(b, b_hat)
+  ber.append(ber_now)
+
+  b, b_hat = model(batch_size=batch_size, weighted=True)
+  ber_now = sn.utils.metrics.compute_ber(b, b_hat)
+  ber2.append(ber_now)
+
+  x.append(2**i)
+  plt.show()
+  print(f"Completion time: {time.time()-start_2}")
+
+plt.rcParams["figure.figsize"] = (12.8, 9.6)
+plt.plot(x, ber, "g", label="Majority Vote")
+plt.plot(x, ber2, "r", label="Weighted Vote")
+plt.yscale("log")
+
+plt.ylabel("Bit Error Rate (BER)")
+plt.xlabel("Number of UE")
+plt.ylim([1e-6, 1e0])
+plt.xlim([0, 32])
+plt.xticks(np.arange(0, 32, 1))
+plt.legend()
+plt.grid()
+plt.show()
+
+
 # for distance_to_bs in range(10, 2010, 10):
 #   print(distance_to_bs)
 #   x1 = 0
@@ -301,16 +332,15 @@ start = time.time()
 #   ber2.append(x2/tests)
 #   ber3.append(x3/tests)
 #   x.append(distance_to_bs)
-print("Simulating...")
-ber = 0
-for i in range(1):
-  b, b_hat = model(batch_size=batch_size, weighted=True)
-  ber += sn.utils.metrics.compute_ber(b, b_hat)
-ber = ber/1
+# ber = 0
+# for i in range(1):
+#   b, b_hat = model(batch_size=batch_size, weighted=True)
+#   ber += sn.utils.metrics.compute_ber(b, b_hat)
+# ber = ber/1
 print(f'Running time: {time.time()-start}')
 
-nb_bits = np.size(b.numpy())
-print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber.numpy(), 30, nb_bits))
+# nb_bits = np.size(b.numpy())
+# print("BER: {:.4} at Eb/No of {} dB and {} simulated bits".format(ber.numpy(), 30, nb_bits))
 
 
 #plt.show()
